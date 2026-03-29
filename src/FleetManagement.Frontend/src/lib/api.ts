@@ -23,12 +23,22 @@ export interface Vehicle {
   updatedAt: string;
 }
 
+export interface Waypoint {
+  nodeId      : string;
+  coordinate  : GeoCoordinate
+  address     : string;
+  arrivalTime : string | null;
+  departureTime: string | null;
+  stopDurationMin: number;
+}
+
 export interface Route {
   id: string;
   vehicleId: string;
   driverId: string | null;
   totalDistanceKm: number;
   estimatedDurationMin: number;
+  waypoints: Waypoint[];
   status: string;
   priority: string;
   algorithm: string;
@@ -89,13 +99,15 @@ async function post<T>(path: string, body?: unknown): Promise<T> {
   return r.json().catch(() => ({} as T));
 }
 
-async function patch(path: string, body: unknown): Promise<void> {
+async function patch<T = void>(path: string, body: unknown): Promise<T> {
   const r = await fetch(`${BASE}${path}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body)
   });
   if (!r.ok) throw new Error(`PATCH ${path} → ${r.status}`);
+  const text = await r.text();
+  return text ? JSON.parse(text) as T : undefined as T;
 }
 
 async function del(path: string): Promise<void> {
@@ -129,7 +141,9 @@ export const routes = {
   plan:     (req: PlanRouteRequest) => post<Route>('/routes/plan', req),
   activate: (id: string)    => post<void>(`/routes/${id}/activate`),
   complete: (id: string)    => post<void>(`/routes/${id}/complete`),
-  cancel:   (id: string, reason: string) => post<void>(`/routes/${id}/cancel`, { reason })
+  cancel:   (id: string, reason: string) => post<void>(`/routes/${id}/cancel`, { reason }),
+  updateWaypoints: (id: string, waypoints: { latitude: number; longitude: number }[], algorithm: string) =>
+      patch(`/routes/${id}/waypoints`, { waypoints, algorithm }) as Promise<Route>
 };
 
 // ── Fleet API ────────────────────────────────────────────────

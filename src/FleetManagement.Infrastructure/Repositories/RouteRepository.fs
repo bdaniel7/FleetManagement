@@ -181,6 +181,24 @@ type PostgresRouteRepository(ctx: IDbContext) =
             })
         }
 
+        member _.UpdateWaypoints (RouteId rid, waypoints, algo) = async {
+            do! ctx.InTransaction(fun conn tx -> async {
+                let! _ = Db.execute
+                            """UPDATE public.fms_routes
+                               SET waypoints_json    = @waypoints::jsonb,
+                                   optimized_path_json = @path::jsonb,
+                                   algorithm         = @algo,
+                                   status            = 'Planned',
+                                   updated_at        = NOW()
+                               WHERE id = @id"""
+                            {| id       = rid
+                               waypoints = Mapping.waypointsJson waypoints
+                               path      = Mapping.nodeIdsJson (waypoints |> List.map (fun w -> w.NodeId))
+                               algo      = string algo |} conn tx
+                return ()
+            })
+        }
+
         member _.Complete (RouteId rid) = async {
             do! ctx.InTransaction(fun conn tx -> async {
                 let! _ = Db.execute

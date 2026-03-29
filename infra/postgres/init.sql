@@ -48,9 +48,9 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public
 DO $$
 BEGIN
   IF EXISTS (SELECT FROM information_schema.tables
-             WHERE table_schema = 'public' AND table_name = 'vehicles') THEN
+             WHERE table_schema = 'public' AND table_name = 'fms_vehicles') THEN
     EXECUTE 'CREATE INDEX IF NOT EXISTS idx_vehicles_plate_trgm
-             ON vehicles USING gin (license_plate gin_trgm_ops)';
+             ON fms_vehicles USING gin (license_plate gin_trgm_ops)';
   END IF;
 END
 $$;
@@ -62,8 +62,8 @@ SELECT
     COUNT(*)                          AS vehicle_count,
     ROUND(AVG(v.fuel_level_pct)::numeric, 1) AS avg_fuel_pct,
     COUNT(r.id) FILTER (WHERE r.status = 'Active') AS active_routes
-FROM vehicles v
-LEFT JOIN routes r ON r.vehicle_id = v.id
+FROM fms_vehicles v
+LEFT JOIN fms_routes r ON r.vehicle_id = v.id
 GROUP BY v.status;
 
 COMMENT ON VIEW fleet_overview IS 'Live fleet status breakdown — refreshes on each query';

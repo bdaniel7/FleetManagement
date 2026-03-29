@@ -11,6 +11,7 @@
     <Compile Include="Middleware/SecurityMiddleware.fs" />
     <Compile Include="Middleware/RateLimitMiddleware.fs" />
     <Compile Include="Hubs/TelemetryHub.fs" />
+    <Compile Include="Endpoints\Dtos.fs" />
     <Compile Include="Endpoints/VehicleEndpoints.fs" />
     <Compile Include="Endpoints/RouteEndpoints.fs" />
     <Compile Include="Endpoints/FleetEndpoints.fs" />

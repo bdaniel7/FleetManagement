@@ -34,6 +34,7 @@ type IRouteRepository =
     abstract GetAll        : unit -> Async<Route list>
     abstract Insert        : Route -> Async<unit>
     abstract UpdateStatus  : RouteId * RouteStatus -> Async<unit>
+    abstract UpdateWaypoints : RouteId * Waypoint list * PathfindingAlgorithm -> Async<unit>
     abstract Complete      : RouteId -> Async<unit>
 
 type IEventRepository =

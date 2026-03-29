@@ -13,6 +13,16 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FleetManagement.Infrastruct
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FleetManagement.Tests", "tests\FleetManagement.Tests\FleetManagement.Tests.fsproj", "{7E5DE83F-54D7-4A27-9D13-8E71BDDF50F7}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "infra", "infra", "{7515F465-D9B2-4D29-B59F-327554737151}"
+	ProjectSection(SolutionItems) = preProject
+		infra\postgres\seed.sql = infra\postgres\seed.sql
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "postgres", "postgres", "{EB1A9D34-8225-422B-8184-ECEBEDD82DD8}"
+	ProjectSection(SolutionItems) = preProject
+		infra\postgres\init.sql = infra\postgres\init.sql
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -50,5 +60,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{EB1A9D34-8225-422B-8184-ECEBEDD82DD8} = {7515F465-D9B2-4D29-B59F-327554737151}
 	EndGlobalSection
 EndGlobal

@@ -2,6 +2,7 @@ module FleetManagement.API.Program
 
 open System
 open System.Text
+open System.Text.Json
 open System.Text.Json.Serialization
 open FleetManagement.Core.Domain
 open FleetManagement.Infrastructure.IRepositories
@@ -95,6 +96,9 @@ let main args =
             opts.SerializerOptions.Converters.Add(AlgorithmConverter())) |> ignore
 
         services.ConfigureHttpJsonOptions(fun o ->
+                        o.SerializerOptions.PropertyNameCaseInsensitive <- true
+                        o.SerializerOptions.PropertyNamingPolicy        <- JsonNamingPolicy.CamelCase
+                        o.SerializerOptions.DefaultIgnoreCondition      <- JsonIgnoreCondition.WhenWritingNull
                         o.SerializerOptions.Converters.Add(
                             JsonFSharpConverter(JsonUnionEncoding.Default ||| JsonUnionEncoding.UnwrapSingleCaseUnions))
                     ) |> ignore

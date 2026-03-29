@@ -84,6 +84,7 @@ let migrations = [
                 waypoints_json          JSONB       NOT NULL DEFAULT '[]',
                 optimized_path_json     JSONB       NOT NULL DEFAULT '[]',
                 created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                 started_at              TIMESTAMPTZ,
                 completed_at            TIMESTAMPTZ
             );

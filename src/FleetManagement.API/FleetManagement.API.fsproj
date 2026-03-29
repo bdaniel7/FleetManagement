@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>10.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <Optimize>true</Optimize>
+    <RootNamespace>FleetManagement.API</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Configuration.fs" />
+    <Compile Include="Middleware/SecurityMiddleware.fs" />
+    <Compile Include="Middleware/RateLimitMiddleware.fs" />
+    <Compile Include="Hubs/TelemetryHub.fs" />
+    <Compile Include="Endpoints/VehicleEndpoints.fs" />
+    <Compile Include="Endpoints/RouteEndpoints.fs" />
+    <Compile Include="Endpoints/FleetEndpoints.fs" />
+    <Compile Include="Program.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\FleetManagement.Core\FleetManagement.Core.fsproj" />
+    <ProjectReference Include="..\FleetManagement.Actors\FleetManagement.Actors.fsproj" />
+    <ProjectReference Include="..\FleetManagement.Infrastructure\FleetManagement.Infrastructure.fsproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="FSharp.SystemTextJson" Version="1.4.36" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.*" />
+    <PackageReference Include="Microsoft.OpenApi" Version="3.5.0" />
+    <PackageReference Include="Serilog" Version="4.3.1" />
+    <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
+    <PackageReference Include="Serilog.Sinks.Console"                  Version="6.*" />
+    <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.7" />
+    <PackageReference Update="FSharp.Core" Version="10.1.201" />
+  </ItemGroup>
+</Project>

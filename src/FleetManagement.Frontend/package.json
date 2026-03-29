@@ -1,0 +1,30 @@
+{
+  "name": "fleet-management-frontend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-check --tsconfig ./tsconfig.json"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^7.0.0",
+    "@types/node": "^25.5.0",
+    "autoprefixer": "^10.4.0",
+    "postcss": "^8.4.0",
+    "svelte": "^5.0.0",
+    "svelte-check": "^4.0.0",
+    "typescript": "^6.0.2",
+    "vite": "^8.0.3"
+  },
+  "dependencies": {
+    "@microsoft/signalr": "^10.0.0",
+    "@types/leaflet": "^1.9.0",
+    "chart.js": "^4.4.0",
+    "date-fns": "^4.1.0",
+    "leaflet": "^1.9.4",
+    "path": "^0.12.7"
+  }
+}

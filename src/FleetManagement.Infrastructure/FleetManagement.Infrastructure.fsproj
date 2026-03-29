@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>10.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <Optimize>true</Optimize>
+    <RootNamespace>FleetManagement.Infrastructure</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="IRepositories.fs" />
+    <Compile Include="DbContext.fs" />
+    <Compile Include="Repositories/VehicleRepository.fs" />
+    <Compile Include="Repositories/DriverRepository.fs" />
+    <Compile Include="Repositories/RouteRepository.fs" />
+    <Compile Include="Repositories/EventRepository.fs" />
+    <Compile Include="Migrations/Schema.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\FleetManagement.Core\FleetManagement.Core.fsproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Npgsql"                    Version="9.*" />
+    <PackageReference Include="Dapper"                    Version="2.*" />
+    <PackageReference Include="Npgsql.NodaTime"           Version="9.*" />
+    <PackageReference Update="FSharp.Core"               Version="10.1.201" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.*" />
+  </ItemGroup>
+</Project>

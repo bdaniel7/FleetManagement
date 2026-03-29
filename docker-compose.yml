@@ -1,0 +1,165 @@
+name: fleet-management
+
+# ── Shared environment references ─────────────────────────────
+x-api-env: &api-env
+  ASPNETCORE_ENVIRONMENT: Production
+  ConnectionStrings__Postgres: >-
+    Host=postgres;Port=5432;Database=fleetdb;
+    Username=fleet;Password=${POSTGRES_PASSWORD:-fleet};
+    Maximum Pool Size=50;Command Timeout=30;
+    SSL Mode=Prefer;Trust Server Certificate=true
+  Jwt__SecretKey:   ${JWT_SECRET:-CHANGE_ME_IN_PRODUCTION_MIN_32_CHARS}
+  Jwt__Issuer:      fleet-api
+  Jwt__Audience:    fleet-client
+  AllowedOrigins:   http://localhost,http://frontend
+
+services:
+
+  # ── PostgreSQL ───────────────────────────────────────────────
+  postgres:
+    image: postgres:17-alpine
+    container_name: fleet-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       fleetdb
+      POSTGRES_USER:     fleet
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fleet}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale=C"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fleet -d fleetdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    networks:
+      - fleet-internal
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+
+  # ── Akka cluster node 1 (seed + primary) ────────────────────
+  api-node1:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    container_name: fleet-api-node1
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      <<: *api-env
+      Akka__Hostname:  api-node1
+      Akka__Port:      2551
+      Akka__SeedNodes: api-node1:2551,api-node2:2551
+      ASPNETCORE_URLS: http://+:5000
+    ports:
+      - "5001:5000"   # direct access for debugging
+      - "2551:2551"   # Akka remoting
+    volumes:
+      - api-logs-1:/app/logs
+      - api-snapshots-1:/app/snapshots
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5000/api/fleet/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - fleet-internal
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: '2'
+
+  # ── Akka cluster node 2 ──────────────────────────────────────
+  api-node2:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    container_name: fleet-api-node2
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api-node1:
+        condition: service_healthy
+    environment:
+      <<: *api-env
+      Akka__Hostname:  api-node2
+      Akka__Port:      2552
+      Akka__SeedNodes: api-node1:2551,api-node2:2551
+      ASPNETCORE_URLS: http://+:5000
+    ports:
+      - "5002:5000"
+      - "2552:2552"
+    volumes:
+      - api-logs-2:/app/logs
+      - api-snapshots-2:/app/snapshots
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:5000/api/fleet/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    networks:
+      - fleet-internal
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: '2'
+
+  # ── Svelte Frontend ──────────────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    container_name: fleet-frontend
+    restart: unless-stopped
+    depends_on:
+      - api-node1
+    networks:
+      - fleet-internal
+
+  # ── Nginx reverse proxy ──────────────────────────────────────
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: fleet-nginx
+    restart: unless-stopped
+    depends_on:
+      - frontend
+      - api-node1
+      - api-node2
+    ports:
+      - "80:80"
+    volumes:
+      - ./infra/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      # Mount built frontend assets directly (alternative to frontend service)
+      # - frontend-dist:/usr/share/nginx/html:ro
+    networks:
+      - fleet-internal
+      - fleet-external
+
+# ── Networks ──────────────────────────────────────────────────
+networks:
+  fleet-internal:
+    driver: bridge
+    internal: true    # no direct internet access for backend services
+  fleet-external:
+    driver: bridge    # nginx is the only publicly reachable service
+
+# ── Volumes ───────────────────────────────────────────────────
+volumes:
+  postgres-data:
+  api-logs-1:
+  api-logs-2:
+  api-snapshots-1:
+  api-snapshots-2:

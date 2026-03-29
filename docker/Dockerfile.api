@@ -1,0 +1,43 @@
+# ── Build stage ───────────────────────────────────────────────
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+
+# Copy project files for layer-cached restore
+COPY src/FleetManagement.Core/FleetManagement.Core.fsproj              src/FleetManagement.Core/
+COPY src/FleetManagement.Actors/FleetManagement.Actors.fsproj          src/FleetManagement.Actors/
+COPY src/FleetManagement.Infrastructure/FleetManagement.Infrastructure.fsproj  src/FleetManagement.Infrastructure/
+COPY src/FleetManagement.API/FleetManagement.API.fsproj                src/FleetManagement.API/
+
+RUN dotnet restore src/FleetManagement.API/FleetManagement.API.fsproj
+
+# Copy full source
+COPY . .
+
+# Publish self-contained for portability
+RUN dotnet publish src/FleetManagement.API/FleetManagement.API.fsproj \
+    -c Release \
+    -o /app/publish \
+    --no-restore
+
+# ── Runtime stage ─────────────────────────────────────────────
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+WORKDIR /app
+
+# Security: non-root user
+RUN addgroup --system fleet && adduser --system --ingroup fleet fleetuser
+USER fleetuser
+
+COPY --from=build /app/publish .
+
+# Create writable directories for logs/snapshots
+RUN mkdir -p logs snapshots
+
+ENV ASPNETCORE_ENVIRONMENT=Production
+ENV ASPNETCORE_URLS=http://+:5000
+
+EXPOSE 5000 2551
+
+HEALTHCHECK --interval=15s --timeout=5s --retries=3 \
+  CMD wget -qO- http://localhost:5000/api/fleet/health || exit 1
+
+ENTRYPOINT ["dotnet", "FleetManagement.API.dll"]

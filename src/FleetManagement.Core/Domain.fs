@@ -163,6 +163,25 @@ type PathfindingAlgorithm =
     | AStar
     | Dijkstra
     | BellmanFord
+and AlgorithmConverter() =
+    inherit JsonConverter<PathfindingAlgorithm>()
+
+    override _.Read(reader, _typeToConvert, _options) =
+        match reader.GetString() with
+        | "AStar"        -> AStar
+        | "Dijkstra"     -> Dijkstra
+        | "BellmanFord"  -> BellmanFord
+        | unknown      -> failwith $"Unknown PathfindingAlgorithm: '{unknown}'"
+
+    override _.Write(writer, value, _options) =
+        let str =
+            match value with
+            | AStar        -> "AStar"
+            | Dijkstra     -> "Dijkstra"
+            | BellmanFord  -> "BellmanFord"
+
+        writer.WriteStringValue(str)
+
 
 // ============================================================
 //  Aggregates

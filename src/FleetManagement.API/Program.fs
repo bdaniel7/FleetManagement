@@ -91,6 +91,9 @@ let main args =
         services.Configure<JsonOptions> (fun (opts: JsonOptions) ->
             opts.SerializerOptions.Converters.Add(RouteStatusConverter())) |> ignore
 
+        services.Configure<JsonOptions> (fun (opts: JsonOptions) ->
+            opts.SerializerOptions.Converters.Add(AlgorithmConverter())) |> ignore
+
         services.ConfigureHttpJsonOptions(fun o ->
                         o.SerializerOptions.Converters.Add(
                             JsonFSharpConverter(JsonUnionEncoding.Default ||| JsonUnionEncoding.UnwrapSingleCaseUnions))

@@ -1,18 +1,59 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Mono:wght@300;400;500&display=swap');
 @import 'leaflet/dist/leaflet.css';
 
+/* -- Light, easy-on-the-eyes palette ------------------------- */
+/* Warm off-white backgrounds, cool-slate text, teal accents.   */
+/* No pure white (#fff) � everything is slightly warm/cool to   */
+/* reduce glare while keeping it crisp and professional.        */
 :root {
-  --bg: #F0F1C7FF;
-  --bg-panel: #afc2e3;
-  --bg-hover:    #111d2c;
-  --border:      #1e2d45;
-  --text:        #c8d6e8;
-  --text-muted:  #6b84a0;
-  --text-faint:  #4a637e;
-  --accent:      #22d3a5;
-  --accent-blue: #60a5fa;
-  --accent-warn: #f59e0b;
-  --accent-err:  #f43f5e;
+  /* Backgrounds */
+  --bg:            #f0f4f8;   /* page canvas � cool off-white   */
+  --bg-panel:      #ffffff;   /* cards, panels                   */
+  --bg-hover:      #e8eef5;   /* hover state                     */
+  --bg-active:     #dce8f5;   /* active/selected                 */
+  --bg-subtle:     #f7f9fc;   /* subtle section fills            */
+
+  /* Borders */
+  --border:        #d0dae6;   /* default border                  */
+  --border-strong: #b0bfcf;   /* emphasized border               */
+
+  /* Text */
+  --text:          #1e2d3d;   /* primary text                    */
+  --text-muted:    #4a6076;   /* secondary / labels              */
+  --text-faint:    #7a92a8;   /* placeholders, hints             */
+
+  /* Accent � teal, same hue as dark theme but richer */
+  --accent:        #0ea882;
+  --accent-hover:  #0c9471;
+  --accent-bg:     #e6f7f2;   /* tint for accent backgrounds     */
+
+  /* Semantic */
+  --accent-blue:   #2563eb;
+  --accent-purple: #7c3aed;
+  --accent-warn:   #d97706;
+  --accent-warn-bg:#fef3c7;
+  --accent-err:    #dc2626;
+  --accent-err-bg: #fee2e2;
+  --accent-ok:     #16a34a;
+
+  /* Status colors */
+  --status-idle:        #2563eb;
+  --status-enroute:     #0ea882;
+  --status-maintenance: #d97706;
+  --status-charging:    #7c3aed;
+  --status-outofservice:#dc2626;
+
+  /* Sidebar (slightly darker panel) */
+  --sidebar-bg:         #e8eef5;
+  --sidebar-border:     #d0dae6;
+  --sidebar-text:       #4a6076;
+  --sidebar-active-bg:  #dce8f5;
+  --sidebar-active-text:#0ea882;
+  --sidebar-active-border:#0ea882;
+
+  /* Shadow */
+  --shadow-sm: 0 1px 3px rgba(30,45,61,0.08);
+  --shadow-md: 0 4px 12px rgba(30,45,61,0.10);
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -22,10 +63,13 @@ html, body {
   margin: 0;
   padding: 0;
   overflow: hidden;
+  font-family: 'Inter', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
 }
 
-::-webkit-scrollbar { width: 5px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #e9ef2a; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #2a4060; }
-
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--border-strong); }

@@ -15,6 +15,7 @@
     <Compile Include="Endpoints/VehicleEndpoints.fs" />
     <Compile Include="Endpoints/RouteEndpoints.fs" />
     <Compile Include="Endpoints/FleetEndpoints.fs" />
+    <Compile Include="Endpoints\TripsEndpoints.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>

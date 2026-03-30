@@ -130,6 +130,7 @@ and PriorityConverter() =
             | Emergency -> "Emergency"
         writer.WriteStringValue(str)
 
+[<JsonConverter(typeof<RouteStatusConverter>)>]
 type RouteStatus =
     | Planned
     | Active
@@ -158,6 +159,68 @@ and RouteStatusConverter() =
             | Rerouting -> "Rerouting"
 
         writer.WriteStringValue(str)
+
+
+// ── Trip ─────────────────────────────────────────────────────
+// A user-defined journey with ordered named stops.
+// The start and end waypoint can be the same (circular trip).
+
+[<Struct>]
+type TripId = TripId of Guid
+
+[<JsonConverter(typeof<TripStatusConverter>)>]
+type TripStatus =
+    | Draft      // being planned, not yet assigned
+    | Scheduled  // assigned to a vehicle, not yet started
+    | InProgress // vehicle is on the road
+    | TripCompleted
+    | TripCancelled
+and TripStatusConverter() =
+    inherit JsonConverter<TripStatus>()
+
+    override _.Read(reader, _typeToConvert, _options) =
+        match reader.GetString() with
+        | "Draft"        -> Draft
+        | "Scheduled"     -> Scheduled
+        | "InProgress"       -> InProgress
+        | "TripCompleted"  -> TripCompleted
+        | "TripCancelled"  -> TripCancelled
+        | unknown      -> failwith $"Unknown TripStatus: '{unknown}'"
+
+    override _.Write(writer, value, _options) =
+        let str =
+            match value with
+            | Draft          -> "Draft"
+            | Scheduled      -> "Scheduled"
+            | InProgress     -> "InProgress"
+            | TripCompleted  -> "TripCompleted"
+            | TripCancelled  -> "TripCancelled"
+
+        writer.WriteStringValue(str)
+
+type TripWaypoint = {
+    Order       : int                 // 0-based position in the trip
+    Label       : string              // e.g. "Warehouse", "Customer A"
+    Coordinate  : GeoCoordinate
+    Notes       : string              // optional stop notes
+    DwellMin    : int                 // expected stop duration in minutes
+}
+
+type Trip = {
+    Id          : TripId
+    Name        : string
+    Description : string
+    VehicleId   : VehicleId option
+    DriverId    : DriverId option
+    Waypoints   : TripWaypoint list   // ordered by TripWaypoint.Order
+    Status      : TripStatus
+    IsCircular  : bool                // true = last waypoint returns to first
+    TotalDistanceKm : float           // straight-line sum, updated on save
+    CreatedAt   : DateTimeOffset
+    UpdatedAt   : DateTimeOffset
+    StartedAt   : DateTimeOffset option
+    CompletedAt : DateTimeOffset option
+}
 
 type PathfindingAlgorithm =
     | AStar

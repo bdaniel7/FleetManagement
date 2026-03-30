@@ -78,6 +78,43 @@ export interface PlanRouteRequest {
   priority: 'Low' | 'Normal' | 'High' | 'Emergency';
 }
 
+// ── Trip types ────────────────────────────────────────────────
+
+export interface TripWaypoint {
+  order:    number;
+  label:    string;
+  coordinate: GeoCoordinate;
+  // lat:      number;
+  // lon:      number;
+  notes:    string;
+  dwellMin: number;
+}
+
+export interface Trip {
+  id:              string;
+  name:            string;
+  description:     string;
+  vehicleId:       string | null;
+  driverId:        string | null;
+  status:          'Draft' | 'Scheduled' | 'InProgress' | 'Completed' | 'Cancelled';
+  isCircular:      boolean;
+  totalDistanceKm: number;
+  waypoints:       TripWaypoint[];
+  createdAt:       string;
+  updatedAt:       string;
+  startedAt:       string | null;
+  completedAt:     string | null;
+}
+
+export interface CreateTripRequest {
+  name:        string;
+  description: string;
+  vehicleId?:  string;
+  driverId?:   string;
+  isCircular:  boolean;
+  waypoints:   TripWaypoint[];
+}
+
 // ── Fetch helpers ────────────────────────────────────────────
 
 async function get<T>(path: string): Promise<T> {
@@ -153,6 +190,27 @@ export const fleet = {
   health:  () => get<{ status: string; timestamp: string }>('/fleet/health'),
   alert:   (message: string, priority: string, vehicleId?: string) =>
              post<void>('/fleet/alert', { message, priority, vehicleId })
+};
+
+// ── Trip API ──────────────────────────────────────────────────
+
+export const trips = {
+  list:      ()              => get<Trip[]>('/trips'),
+  get:       (id: string)    => get<Trip>(`/trips/${id}`),
+  byStatus:  (s: string)     => get<Trip[]>(`/trips/status/${s}`),
+  byVehicle: (vid: string)   => get<Trip[]>(`/trips/vehicle/${vid}`),
+  create:    (req: CreateTripRequest) => post<Trip>('/trips', req),
+  update:    (id: string, req: Omit<CreateTripRequest, never>) => {
+    return fetch(`/api/trips/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(req)
+    }).then(r => r.json() as Promise<Trip>);
+  },
+  start:    (id: string) => post<void>(`/trips/${id}/start`),
+  complete: (id: string) => post<void>(`/trips/${id}/complete`),
+  cancel:   (id: string) => post<void>(`/trips/${id}/cancel`),
+  delete:   (id: string) => del(`/trips/${id}`)
 };
 
 // ── SignalR Hub ───────────────────────────────────────────────

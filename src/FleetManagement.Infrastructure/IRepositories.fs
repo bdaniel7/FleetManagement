@@ -41,3 +41,12 @@ type IEventRepository =
     abstract Append            : DomainEvent -> Async<unit>
     abstract GetByCorrelation  : Guid -> Async<DomainEvent list>
     abstract GetRecent         : int -> Async<DomainEvent list>
+
+type ITripsRepository =
+    abstract GetAll        : unit -> Async<Trip list>
+    abstract GetById       : TripId -> Async<Trip option>
+    abstract GetByVehicle  : VehicleId -> Async<Trip list>
+    abstract GetByStatus   : TripStatus -> Async<Trip list>
+    abstract Upsert        : Trip -> Async<unit>
+    abstract UpdateStatus  : TripId * TripStatus -> Async<unit>
+    abstract Delete        : TripId -> Async<bool>

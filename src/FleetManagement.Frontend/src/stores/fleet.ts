@@ -1,13 +1,14 @@
 // src/stores/fleet.ts — reactive state management
 import { writable, derived } from 'svelte/store';
 import type { HubConnection } from '@microsoft/signalr';
-import type { Vehicle, Route, FleetSummary, TelemetryEvent } from '$lib/api';
-import { vehicles as vehiclesApi, routes as routesApi, fleet as fleetApi, createHubConnection } from '$lib/api';
+import type { Vehicle, Route, FleetSummary, TelemetryEvent, Trip } from '$lib/api';
+import { vehicles as vehiclesApi, routes as routesApi, fleet as fleetApi, trips as tripsApi, createHubConnection } from '$lib/api';
 
 // ── Raw stores ────────────────────────────────────────────────
 
 export const vehicleList   = writable<Vehicle[]>([]);
 export const routeList     = writable<Route[]>([]);
+export const tripList      = writable<Trip[]>([]);
 export const fleetSummary  = writable<FleetSummary | null>(null);
 export const telemetryMap  = writable<Record<string, TelemetryEvent>>({});
 export const alerts        = writable<{ message: string; priority: string; timestamp: string; id: string }[]>([]);
@@ -45,13 +46,15 @@ export async function loadAll() {
   error.set(null);
   try {
     // when any of these calls fail, no other data is displayed.
-    const [vs, rs, fs] = await Promise.all([
+    const [vs, rs, ts, fs] = await Promise.all([
       vehiclesApi.list(),
       routesApi.list(),
+      tripsApi.list(),
       fleetApi.summary()
     ]);
     vehicleList.set(vs);
     routeList.set(rs);
+    tripList.set(ts);
     fleetSummary.set(fs);
   } catch (e) {
     error.set((e as Error).message);

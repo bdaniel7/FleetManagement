@@ -134,6 +134,29 @@ let migrations = [
             // FOR VALUES FROM (DATE_TRUNC('month', NOW()))
             //             TO   (DATE_TRUNC('month', NOW()) + INTERVAL '1 month');
     }
+    {
+        Version = 7
+        Name    = "create_trips"
+        UpSql   = """
+            CREATE TABLE IF NOT EXISTS public.fms_trips (
+                id                  UUID        PRIMARY KEY,
+                name                TEXT        NOT NULL,
+                description         TEXT        NOT NULL DEFAULT '',
+                vehicle_id          UUID        REFERENCES public.fms_vehicles(id) ON DELETE SET NULL,
+                driver_id           UUID        REFERENCES public.fms_drivers(id)  ON DELETE SET NULL,
+                status              TEXT        NOT NULL DEFAULT 'Draft',
+                is_circular         BOOLEAN     NOT NULL DEFAULT false,
+                total_distance_km   DOUBLE PRECISION NOT NULL DEFAULT 0.0,
+                waypoints_json      JSONB       NOT NULL DEFAULT '[]',
+                created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+                started_at          TIMESTAMPTZ,
+                completed_at        TIMESTAMPTZ
+            );
+            CREATE INDEX IF NOT EXISTS idx_trips_vehicle_id ON public.fms_trips(vehicle_id);
+            CREATE INDEX IF NOT EXISTS idx_trips_status     ON public.fms_trips(status);
+            CREATE INDEX IF NOT EXISTS idx_trips_created_at ON public.fms_trips(created_at DESC);"""
+    }
 ]
 
 // ============================================================

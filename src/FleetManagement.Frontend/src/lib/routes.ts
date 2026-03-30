@@ -4,6 +4,7 @@ import Dashboard    from '../components/Dashboard.svelte';
 import FleetMap     from '../components/FleetMap.svelte';
 import VehicleTable from '../components/VehicleTable.svelte';
 import RoutePlanner from '../components/RoutePlanner.svelte';
+import TripPlanner  from '../components/TripPlanner.svelte';
 import AlertPanel   from '../components/AlertPanel.svelte';
 
 // svelte-spa-router uses hash routing by default: /#/dashboard
@@ -21,6 +22,7 @@ export const navItems: NavItem[] = [
   { path: '/live-map',  icon: '◎', label: 'Live Map'  },
   { path: '/vehicles',  icon: '▣', label: 'Vehicles'  },
   { path: '/routes',    icon: '◈', label: 'Routes'    },
+  { path: '/trips',     icon: '⟳', label: 'Trips'     },
   { path: '/alerts',    icon: '◉', label: 'Alerts'    },
 ];
 
@@ -31,6 +33,7 @@ const routes: Record<string, ComponentType> = {
   '/live-map':   FleetMap,
   '/vehicles':   VehicleTable,
   '/routes':     RoutePlanner,
+  '/trips':      TripPlanner,
   '/alerts':     AlertPanel,
 };
 

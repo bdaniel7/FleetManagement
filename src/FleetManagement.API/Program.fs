@@ -1,18 +1,18 @@
 module FleetManagement.API.Program
 
 open System
-open System.Text
 open System.Text.Json
 open System.Text.Json.Serialization
+open FleetManagement.API.Endpoints
+open FleetManagement.API.Endpoints.TripEndpoints
 open FleetManagement.Core.Domain
 open FleetManagement.Infrastructure.IRepositories
+open FleetManagement.Infrastructure.Repositories.TripRepository
 open Microsoft.AspNetCore.Builder
-open Microsoft.AspNetCore.Authentication.JwtBearer
 open Microsoft.AspNetCore.Http.Json
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.Configuration
-open Microsoft.IdentityModel.Tokens
 open Microsoft.OpenApi
 open Microsoft.Extensions.Logging
 open Serilog
@@ -79,6 +79,7 @@ let main args =
         services.AddScoped<IDriverRepository,  PostgresDriverRepository>()  |> ignore
         services.AddScoped<IRouteRepository,   PostgresRouteRepository>()   |> ignore
         services.AddScoped<IEventRepository,   PostgresEventRepository>()   |> ignore
+        services.AddScoped<ITripsRepository,   PostgresTripsRepository>()   |> ignore
 
         services.Configure<JsonOptions> (fun (opts: JsonOptions) ->
             opts.SerializerOptions.Converters.Add(VehicleStatusConverter())) |> ignore
@@ -94,6 +95,9 @@ let main args =
 
         services.Configure<JsonOptions> (fun (opts: JsonOptions) ->
             opts.SerializerOptions.Converters.Add(AlgorithmConverter())) |> ignore
+
+        services.Configure<JsonOptions> (fun (opts: JsonOptions) ->
+            opts.SerializerOptions.Converters.Add(TripStatusConverter())) |> ignore
 
         services.ConfigureHttpJsonOptions(fun o ->
                         o.SerializerOptions.PropertyNameCaseInsensitive <- true
@@ -187,10 +191,12 @@ let main args =
         let actorSystem = app.Services.GetRequiredService<FleetActorSystem>()
         let vehicleRepo = app.Services.GetRequiredService<IVehicleRepository>()
         let routeRepo   = app.Services.GetRequiredService<IRouteRepository>()
+        let tripsRepo = app.Services.GetRequiredService<ITripsRepository>()
 
         mapVehicleEndpoints app vehicleRepo actorSystem.FleetSupervisor
         mapRouteEndpoints   app routeRepo   actorSystem.RouteCalculator
         mapFleetEndpoints   app actorSystem.FleetSupervisor actorSystem.RouteCalculator
+        mapTripsEndpoints app tripsRepo
 
         // Graceful shutdown
         let lifetime = app.Services.GetRequiredService<IHostApplicationLifetime>()

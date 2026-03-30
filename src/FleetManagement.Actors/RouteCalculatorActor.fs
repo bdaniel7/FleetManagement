@@ -32,6 +32,14 @@ let private nearestNode (coord: GeoCoordinate) (graph: RoadGraph) : NodeId optio
         |> fun kvp -> Some kvp.Key
 
 // ============================================================
+//  Helpers — safely extract inner string from struct DUs
+//  DO NOT use .ToString() or $"{nodeId}" on [<Struct>] DUs —
+//  F#'s reflection pretty-printer crashes on .NET 10 for structs.
+// ============================================================
+
+let inline private nodeIdStr (NodeId s) = s
+
+// ============================================================
 //  Route builder helpers
 // ============================================================
 
@@ -41,7 +49,7 @@ let private buildRoute (req: RouteRequest) (result: PathResult) : Route =
         |> List.mapi (fun i nodeId ->
             { NodeId         = nodeId
               Coordinate     = { Latitude = 0.0; Longitude = 0.0 }  // filled by caller
-              Address        = nodeId.ToString()
+              Address        = nodeIdStr nodeId
               ArrivalTime    = None
               DepartureTime  = None
               StopDurationMin= 0 })
@@ -127,7 +135,9 @@ let routeCalculatorActor
                             return! loop next
 
                         | Error (PathError.NoPathExists (s, t)) ->
-                            req.ReplyTo.Tell(RouteError (req.RequestId, $"No path from {s} to {t}"))
+                            let sStr = nodeIdStr s
+                            let tStr = nodeIdStr t
+                            req.ReplyTo.Tell(RouteError (req.RequestId, $"No path from {sStr} to {tStr}"))
                             return! loop state
 
                         | Error (PathError.NegativeCycle msg) ->
@@ -135,7 +145,8 @@ let routeCalculatorActor
                             return! loop state
 
                         | Error (PathError.NodeNotFound nid) ->
-                            req.ReplyTo.Tell(RouteError (req.RequestId, $"Node not found: {nid}"))
+                            let nidStr = nodeIdStr nid
+                            req.ReplyTo.Tell(RouteError (req.RequestId, $"Node not found: {nidStr}"))
                             return! loop state
 
                         | Error PathError.EmptyGraph ->

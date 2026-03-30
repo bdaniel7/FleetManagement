@@ -26,5 +26,6 @@
     <PackageReference Include="FsUnit.xUnit" Version="7.1.1" />
     <PackageReference Update="FSharp.Core" Version="10.1.201" />
     <PackageReference Include="xunit.v3" Version="3.2.2" />
+    <PackageReference Include="xunit.v3.core" Version="3.2.2" />
   </ItemGroup>
 </Project>

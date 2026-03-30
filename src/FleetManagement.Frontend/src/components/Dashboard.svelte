@@ -24,7 +24,7 @@
 
   // Build status donut data
   $: statusData = Object.entries($vehiclesByStatus).map(([k, vs]) => ({
-    label: k, //=== 'En Route' ? 'En Route' : k.charAt(0).toUpperCase() + k.slice(1),
+    label: vs[0]?.status ?? k,
     count: vs.length,
     color: statusColors[vs[0]?.status ?? k] ?? '#aaa'
   }));

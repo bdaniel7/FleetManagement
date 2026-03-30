@@ -48,26 +48,29 @@ let fleetSupervisorActor
         // -------------------------------------------------------
         | RegisterVehicle vehicle ->
             if state.VehicleActors.ContainsKey vehicle.Id then
-                log.Warning("Vehicle {Id} already registered", vehicle.Id)
+                let (VehicleId vid) = vehicle.Id
+                log.Warning("Vehicle {Id} already registered", string vid)
                 return! loop state
             else
                 let actorRef =
                     VehicleActor.spawn mailbox.Context.System vehicle publishEvent
                 state.VehicleActors.[vehicle.Id] <- actorRef
-                log.Info("Vehicle {Plate} ({Id}) registered", vehicle.LicensePlate, vehicle.Id)
+                let (VehicleId vid) = vehicle.Id
+                log.Info("Vehicle {Plate} ({Id}) registered", vehicle.LicensePlate, string vid)
                 let ev = vehicleRegistered (Guid.NewGuid()) vehicle.Id vehicle.LicensePlate vehicle.VehicleType
                 publishEvent ev
                 return! loop state
 
         // -------------------------------------------------------
         | RemoveVehicle vehicleId ->
+            let (VehicleId vid) = vehicleId
             match state.VehicleActors.TryGetValue vehicleId with
             | true, ref ->
                 ref.Tell(Shutdown)
                 state.VehicleActors.Remove vehicleId |> ignore
-                log.Info("Vehicle {Id} removed from fleet", vehicleId)
+                log.Info("Vehicle {Id} removed from fleet", string vid)
             | _ ->
-                log.Warning("RemoveVehicle: {Id} not found", vehicleId)
+                log.Warning("RemoveVehicle: {Id} not found", string vid)
             return! loop state
 
         // -------------------------------------------------------

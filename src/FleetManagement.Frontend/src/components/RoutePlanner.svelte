@@ -7,24 +7,36 @@
   let vehicleId = '';
   let algorithm: 'AStar' | 'Dijkstra' | 'BellmanFord' = 'AStar';
   let priority: 'Low' | 'Normal' | 'High' | 'Emergency' = 'Normal';
-  let waypoints: { lat: string; lon: string }[] = [
-    { lat: '52.5200', lon: '13.4050' },
-    { lat: '53.5511', lon: '9.9937'  }
+  let waypoints: { lat: number; lon: number }[] = [
+    { lat: 52.5200, lon: 13.4050 },
+    { lat: 53.5511, lon: 9.9937  }
   ];
   let planning  = false;
   let planError = '';
 
-  function addWaypoint()      {
-    waypoints = [...waypoints, { lat: '', lon: '' }];
+  $: vehiclesById = $vehicleList.reduce<Record<string, string>>(
+          (acc, v) => {
+            acc[v.id.toString()] = `${v.licensePlate} (${v.vehicleType})`;
+            return acc;
+          },
+          {}
+  );
+
+  function addWaypoint() {
+    waypoints = [...waypoints, { lat: 0.0, lon: 0.0 }];
   }
   function removeWaypoint(i: number) {
     waypoints = waypoints.filter((_, idx) => idx !== i);
   }
 
   async function planRoute() {
-    if (!vehicleId) { planError = 'Select a vehicle first'; return; }
-    const parsed = waypoints.map(w => ({ latitude: parseFloat(w.lat), longitude: parseFloat(w.lon) }));
-    if (parsed.some(p => isNaN(p.latitude) || isNaN(p.longitude))) { planError = 'All waypoints need valid coordinates'; return; }
+    if (!vehicleId) {
+      planError = 'Select a vehicle first'; return;
+    }
+    const parsed = waypoints.map(w => ({ latitude: w.lat, longitude: w.lon }));
+    if (parsed.some(p => isNaN(p.latitude) || isNaN(p.longitude))) {
+      planError = 'All waypoints need valid coordinates'; return;
+    }
     planning = true; planError = '';
     try { await routesApi.plan({ vehicleId, waypoints: parsed, algorithm, priority }); await loadAll(); }
     catch (e) { planError = (e as Error).message; }
@@ -33,7 +45,7 @@
 
   // ── Edit waypoints ─────────────────────────────────────────
   let editingRoute: Route | null = null;
-  let editWaypoints: { lat: string; lon: string }[] = [];
+  let editWaypoints: { lat: number; lon: number }[] = [];
   let editAlgorithm: string = 'AStar';
   let saving  = false;
   let saveError = '';
@@ -44,8 +56,8 @@
     saveError = '';
     // Pre-populate from existing waypoints if the API returns them,
     // otherwise fall back to two empty slots so the user can enter new ones.
-    editWaypoints = route.waypoints.map(w => ({ lat: String(w.coordinate.latitude),
-                                                lon: String(w.coordinate.longitude) }));
+    editWaypoints = route.waypoints.map(w => ({ lat: w.coordinate.latitude,
+                                                lon: w.coordinate.longitude }));
   }
 
   function cancelEdit() {
@@ -53,7 +65,7 @@
   }
 
   function addEditWaypoint() {
-    editWaypoints = [...editWaypoints, { lat: '', lon: '' }];
+    editWaypoints = [...editWaypoints, { lat: 0.0, lon: 0.0 }];
   }
   function removeEditWaypoint(i: number) {
     editWaypoints = editWaypoints.filter((_, idx) => idx !== i);
@@ -61,11 +73,13 @@
 
   async function saveWaypoints() {
     if (!editingRoute) return;
-    const parsed = editWaypoints.map(w => ({ latitude: parseFloat(w.lat), longitude: parseFloat(w.lon) }));
+    const parsed = editWaypoints.map(w => ({ latitude: w.lat, longitude: w.lon }));
     if (parsed.some(p => isNaN(p.latitude) || isNaN(p.longitude))) {
       saveError = 'All waypoints need valid coordinates'; return;
     }
-    if (parsed.length < 2) { saveError = 'At least 2 waypoints are required'; return; }
+    if (parsed.length < 2) {
+      saveError = 'At least 2 waypoints are required'; return;
+    }
     saving = true; saveError = '';
     try {
       await routesApi.updateWaypoints(editingRoute.id, parsed, editAlgorithm);
@@ -246,7 +260,7 @@
             <div class="route-id">
               Route <code>{r.id}</code>
             </div>
-            <div class="route-id">Vehicle <code>{r.vehicleId}</code></div>
+            <div class="route-id">Vehicle <code>{vehiclesById[r.vehicleId]}</code></div>
             <div class="route-actions">
               {#if r.status === 'Planned'}
                 <button class="act activate" on:click={() => activateRoute(r.id)}>Activate</button>

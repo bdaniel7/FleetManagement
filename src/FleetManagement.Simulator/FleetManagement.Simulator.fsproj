@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>10.0</LangVersion>
+    <Nullable>enable</Nullable>
+    <Optimize>true</Optimize>
+    <RootNamespace>FleetManagement.Simulator</RootNamespace>
+    <AssemblyName>FleetManagement.Simulator</AssemblyName>
+    <ApplicationIcon />
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Types.fs" />
+    <Compile Include="ApiClient.fs" />
+    <Compile Include="Movement.fs" />
+    <Compile Include="Simulator.fs" />
+    <Compile Include="Program.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Update="FSharp.Core"                      Version="10.1.201" />
+    <PackageReference Include="Microsoft.Extensions.Http"       Version="10.*" />
+    <PackageReference Include="Spectre.Console"                 Version="0.49.*" />
+  </ItemGroup>
+</Project>

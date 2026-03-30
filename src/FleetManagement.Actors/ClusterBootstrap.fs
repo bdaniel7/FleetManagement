@@ -47,6 +47,11 @@ akka {{
 
     roles = ["fleet-node"]
 
+    downing-provider-class = "Akka.Cluster.SBR.SplitBrainResolverProvider, Akka.Cluster"
+    split-brain-resolver {{
+        active-strategy = keep-majority
+    }}
+
     failure-detector {{
       threshold              = 10.0
       heartbeat-interval     = 1s
@@ -58,7 +63,6 @@ akka {{
       number-of-shards = 100
     }}
 
-    auto-down-unreachable-after = 30s
   }}
 
   persistence {{

@@ -66,12 +66,11 @@ module private VehicleTelemetryBuffer =
        b.Buffer.Push ev
        // Rule-based alerting
        if ev.SpeedKmh > 120.0 then
-           b.Alerts.Add $"[{ev.Timestamp}] Speed alert: {ev.SpeedKmh:F1} km/h"
+           b.Alerts.Add $"""[{ev.Timestamp.ToString("HH:mm:ss")}] Speed alert: {ev.SpeedKmh:F1} km/h"""
        if ev.FuelPct < 10.0 then
-           b.Alerts.Add $"[{ev.Timestamp}] Critical fuel: {ev.FuelPct:F1}%%"
+           b.Alerts.Add $"""[{ev.Timestamp.ToString("HH:mm:ss")}] Critical fuel: {ev.FuelPct:F1}%%"""
        if ev.EngineTemp > 110.0 then
-           b.Alerts.Add $"[{ev.Timestamp}] Engine overheat: {ev.EngineTemp:F1}°C"
-           // :HH:mm:ss
+           b.Alerts.Add $"""[{ev.Timestamp.ToString("HH:mm:ss")}] Engine overheat: {ev.EngineTemp:F1}°C"""
        b
 
 

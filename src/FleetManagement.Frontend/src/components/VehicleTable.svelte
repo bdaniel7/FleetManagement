@@ -5,7 +5,7 @@
 
     let filterStatus = 'all';
     let filterQuery = '';
-    let sortKey: keyof Vehicle = 'licensePlate';
+    let sortKey: keyof Vehicle = 'status';
     let sortAsc = true;
     let deleting: string | null = null;
 

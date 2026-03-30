@@ -68,6 +68,12 @@ let vehicleActor
     let correlationId = Guid.NewGuid()
     let log           = mailbox.Context.GetLogger()
 
+    // Extract inner strings from [<Struct>] DUs — never pass them directly
+    // to the logger or string interpolation; .NET 10 crashes on reflection.
+    let inline vidStr (VehicleId g) = string g
+    let inline ridStr (RouteId  g) = string g
+    let inline statusStr (s: VehicleStatus) = sprintf "%A" s   // safe: plain string DU, not struct
+
     let rec loop (state: VehicleActorState) = actor {
         let! msg = mailbox.Receive()
 
@@ -78,7 +84,7 @@ let vehicleActor
 
         | UpdateLocation (loc, spd) ->
             log.Debug("Vehicle {VehicleId} location updated to {Lat},{Lon} at {Speed} km/h",
-                      state.Vehicle.Id, loc.Latitude, loc.Longitude, spd)
+                      vidStr state.Vehicle.Id, loc.Latitude, loc.Longitude, spd)
             let ev    = vehicleLocationUpdated correlationId state.Vehicle.Id loc spd
             publishEvent ev
             let next  = state |> VehicleActorState.applyLocation loc spd |> VehicleActorState.addEvent ev
@@ -87,7 +93,8 @@ let vehicleActor
         | ChangeStatus newStatus ->
             let oldStatus = state.Vehicle.Status
             if oldStatus <> newStatus then
-                log.Info("Vehicle {VehicleId} status: {Old} → {New}", state.Vehicle.Id, oldStatus, newStatus)
+                log.Info("Vehicle {VehicleId} status: {Old} → {New}",
+                         vidStr state.Vehicle.Id, sprintf "%A" oldStatus, sprintf "%A" newStatus)
                 let ev   = vehicleStatusChanged correlationId state.Vehicle.Id oldStatus newStatus
                 publishEvent ev
                 let next = state |> VehicleActorState.applyStatus newStatus |> VehicleActorState.addEvent ev
@@ -101,7 +108,7 @@ let vehicleActor
             let next = state |> VehicleActorState.applyFuel pct |> VehicleActorState.addEvent ev
             // Low fuel warning
             if pct < 15.0 then
-                log.Warning("Vehicle {VehicleId} fuel low: {Pct}%%", state.Vehicle.Id, pct)
+                log.Warning("Vehicle {VehicleId} fuel low: {Pct}%%", vidStr state.Vehicle.Id, pct)
                 mailbox.Context.Parent.Tell(RaiseFleetAlert(
                     $"Low fuel: {state.Vehicle.LicensePlate} at {pct:F1}%%",
                     Priority.High, Some state.Vehicle.Id))
@@ -122,7 +129,7 @@ let vehicleActor
             // Check diagnostic codes
             if not telemetry.DiagnosticCodes.IsEmpty then
                 let codes = String.concat ", " telemetry.DiagnosticCodes
-                log.Warning("Vehicle {VehicleId} diagnostic codes: {Codes}", state.Vehicle.Id, codes)
+                log.Warning("Vehicle {VehicleId} diagnostic codes: {Codes}", vidStr state.Vehicle.Id, codes)
                 mailbox.Context.Parent.Tell(RaiseFleetAlert(
                     $"Diagnostic codes on {state.Vehicle.LicensePlate}: {codes}",
                     Priority.Normal, Some state.Vehicle.Id))
@@ -146,7 +153,7 @@ let vehicleActor
                 return! loop state
 
         | Shutdown ->
-            log.Info("Vehicle actor {VehicleId} shutting down", state.Vehicle.Id)
+            log.Info("Vehicle actor {VehicleId} shutting down", vidStr state.Vehicle.Id)
             mailbox.Context.Stop(mailbox.Self)
             return! loop state
     }

@@ -195,7 +195,7 @@ let main args =
 
         mapVehicleEndpoints app vehicleRepo actorSystem.FleetSupervisor
         mapRouteEndpoints   app routeRepo   actorSystem.RouteCalculator
-        mapFleetEndpoints   app actorSystem.FleetSupervisor actorSystem.RouteCalculator
+        mapFleetEndpoints   app actorSystem.FleetSupervisor actorSystem.RouteCalculator vehicleRepo routeRepo
         mapTripsEndpoints app tripsRepo
 
         // Graceful shutdown

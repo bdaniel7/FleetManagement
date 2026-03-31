@@ -245,29 +245,19 @@
                 </div>
               </div>
               <div class="wp-coords">
-                <input
-                  class="coord"
-                  type="text"
-                  placeholder="Latitude"
-                  bind:value={wp.lat}
-                  disabled={isCircular && i === waypoints.length - 1}
+                <input class="coord" type="text" placeholder="Latitude"
+                  bind:value={wp.lat} disabled={isCircular && i === waypoints.length - 1}
                 />
                 <input
-                  class="coord"
-                  type="text"
-                  placeholder="Longitude"
-                  bind:value={wp.lon}
+                  class="coord" type="text" placeholder="Longitude" bind:value={wp.lon}
                   disabled={isCircular && i === waypoints.length - 1}
-                />
-                <input
-                  class="dwell"
-                  type="number"
-                  min="0"
-                  placeholder="Dwell (min)"
-                  bind:value={wp.dwellMin}
-                  title="Stop duration in minutes"
                 />
               </div>
+                <div>
+                    <span class="wp-badge dwell-time">Stop duration (minutes): </span>
+                    <input class="dwell" type="number" min="0" placeholder="Dwell (min)"
+                        bind:value={wp.dwellMin} title="Stop duration in minutes"/>
+                </div>
               {#if !(isCircular && i === waypoints.length - 1)}
                 <input
                   class="wp-notes"
@@ -450,6 +440,8 @@
     background: var(--border); color: var(--text-muted); flex-shrink: 0;
     letter-spacing: 0.08em;
   }
+
+  .dwell-time {font-size: 11px;}
   .start-badge { background: #dcfce7; color: #15803d; }
   .end-badge   { background: #fee2e2; color: #b91c1c; }
   .wp-label-input { flex: 1; padding: 5px 8px; font-size: 12px; font-weight: 600; }
@@ -463,7 +455,7 @@
   .icon-btn.danger { color: var(--accent-err); }
   .icon-btn.danger:hover { background: var(--accent-err-bg); border-color: var(--accent-err); }
   .wp-coords { display: flex; gap: 6px; }
-  .coord  { flex: 1; padding: 5px 8px; font-size: 12px; font-family: 'DM Mono', monospace; }
+  .coord  { flex: 1; padding: 5px 8px; font-size: 12px; font-family: 'DM Mono', monospace; width: 24px}
   .dwell  { width: 80px; padding: 5px 8px; font-size: 12px; }
   .wp-notes { font-size: 12px; padding: 5px 8px; color: var(--text-muted); }
 

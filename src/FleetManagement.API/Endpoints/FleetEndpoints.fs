@@ -4,6 +4,7 @@ open System
 open System.Threading.Tasks
 open FleetManagement.Actors.ActorMessages
 open FleetManagement.Core.Domain
+open FleetManagement.Infrastructure.IRepositories
 open Microsoft.AspNetCore.Builder
 open Microsoft.AspNetCore.Http
 open Microsoft.AspNetCore.Routing
@@ -11,18 +12,36 @@ open Akka.Actor
 
 let mapFleetEndpoints (app: IEndpointRouteBuilder)
                       (fleetSupervisor: IActorRef)
-                      (routeCalculator : IActorRef) =
+                      (routeCalculator : IActorRef)
+                      (vehicleRepo     : IVehicleRepository)
+                      (routeRepo       : IRouteRepository)=
 
     let tag     = "Fleet"
     let timeout = TimeSpan.FromSeconds 10.0
 
-    // GET /api/fleet/summary
+    // GET /api/fleet/summary  — computed from DB, always accurate regardless of actor state
     app.MapGet("/api/fleet/summary", Func<Task<IResult>>(fun () -> task {
-        try
-            let! summary = fleetSupervisor.Ask<FleetSummary>(GetFleetSummary, timeout)
-            return Results.Ok summary
-        with :? TimeoutException ->
-            return Results.StatusCode 504
+        let! vehicles     = vehicleRepo.GetAll()
+        let! activeRoutes = routeRepo.GetActive()
+
+        let summary = {
+            TotalVehicles    = vehicles.Length
+            ActiveVehicles   = vehicles |> List.filter (fun v -> v.Status = VehicleStatus.EnRoute) |> List.length
+            IdleVehicles     = vehicles |> List.filter (fun v -> v.Status = VehicleStatus.Idle) |> List.length
+            MaintenanceCount = vehicles |> List.filter (fun v -> v.Status = VehicleStatus.Maintenance) |> List.length
+            TotalRoutes      = 0    // expensive — omit from summary
+            ActiveRoutes     = activeRoutes.Length
+            AvgFuelLevel     = if vehicles.IsEmpty then 0.0
+                               else vehicles |> List.averageBy (fun v -> v.FuelLevelPct)
+            LastUpdated      = DateTimeOffset.UtcNow
+        }
+
+        return Results.Ok summary
+        // try
+        //     let! summary = fleetSupervisor.Ask<FleetSummary>(GetFleetSummary, timeout)
+        //     return Results.Ok summary
+        // with :? TimeoutException ->
+        //     return Results.StatusCode 504
     }))
     |> fun e -> e.WithTags(tag) |> ignore
 

@@ -195,7 +195,7 @@
     return `<div style="font-family:Inter,sans-serif;padding:2px 0">
       <div style="font-weight:700;color:#1e2d3d;font-size:13px;margin-bottom:4px">${wp.label}</div>
       <div style="font-size:11px;color:#4a6076;font-family:'DM Mono',monospace">${wp.coordinate.latitude.toFixed(5)}, ${wp.coordinate.longitude.toFixed(5)}</div>
-      ${wp.dwellMin > 0 ? `<div style="font-size:11px;color:#d97706;margin-top:3px">⏱ ${wp.dwellMin} min dwell</div>` : ''}
+      ${wp.dwellMin > 0 ? `<div style="font-size:11px;color:#d97706;margin-top:3px">⏱ ${wp.dwellMin} min stop</div>` : ''}
       ${wp.notes ? `<div style="font-size:11px;color:#4a6076;margin-top:3px">${wp.notes}</div>` : ''}
       <div style="font-size:11px;color:#7a92a8;margin-top:4px">${t.name}</div>
     </div>`;

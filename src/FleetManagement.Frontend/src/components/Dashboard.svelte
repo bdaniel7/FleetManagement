@@ -39,12 +39,14 @@
     }
   }
 
-  // Speed distribution from telemetry
-  $: telemetryEntries = Object.values($telemetryMap);
+  // Speed distribution — prefer live telemetry, fall back to DB vehicle speeds
+  $: speedSources = Object.keys($telemetryMap).length > 0
+          ? Object.values($telemetryMap).map(t => t.speedKmh)
+          : $vehicleList.map(v => v.speedKmh);
   $: {
-    if (speedChart && telemetryEntries.length > 0) {
-      const bins = [0,0,0,0,0,0]; // 0-20, 20-40, 40-60, 60-80, 80-100, 100+
-      telemetryEntries.forEach(t => bins[Math.min(5, Math.floor(t.speedKmh / 20))]++);
+    if (speedChart && speedSources.length > 0) {
+      const bins = [0,0,0,0,0,0];
+      speedSources.forEach(s => bins[Math.min(5, Math.floor(s / 20))]++);
       speedChart.data.datasets[0].data = bins;
       speedChart.update('none');
     }

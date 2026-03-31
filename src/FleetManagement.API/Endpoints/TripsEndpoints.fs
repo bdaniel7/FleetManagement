@@ -13,12 +13,11 @@ open System.Text.Json.Serialization
 
 [<CLIMutable>]
 type TripWaypointDto = {
-    [<JsonPropertyName("order")>]    Order    : int
-    [<JsonPropertyName("label")>]    Label    : string
-    [<JsonPropertyName("lat")>]      Lat      : float
-    [<JsonPropertyName("lon")>]      Lon      : float
-    [<JsonPropertyName("notes")>]    Notes    : string
-    [<JsonPropertyName("dwellMin")>] DwellMin : int
+    [<JsonPropertyName("order")>]         Order    : int
+    [<JsonPropertyName("label")>]         Label    : string
+    [<JsonPropertyName("coordinate")>]    Coordinate    : GeoCoordinate
+    [<JsonPropertyName("notes")>]         Notes    : string
+    [<JsonPropertyName("dwellMin")>]      DwellMin : int
 }
 
 [<CLIMutable>]
@@ -46,7 +45,7 @@ type UpdateTripRequest = {
 let private toWaypoint (d: TripWaypointDto) : TripWaypoint = {
     Order      = d.Order
     Label      = if String.IsNullOrWhiteSpace d.Label then $"Stop {d.Order + 1}" else d.Label
-    Coordinate = { Latitude = d.Lat; Longitude = d.Lon }
+    Coordinate = { Latitude = d.Coordinate.Latitude; Longitude = d.Coordinate.Longitude }
     Notes      = if d.Notes = null then "" else d.Notes
     DwellMin   = d.DwellMin
 }
@@ -54,7 +53,8 @@ let private toWaypoint (d: TripWaypointDto) : TripWaypoint = {
 let private validateWaypoints (dtos: TripWaypointDto[]) =
     if dtos = null || dtos.Length < 2 then
         Error "A trip requires at least 2 waypoints"
-    elif dtos |> Array.exists (fun w -> w.Lat < -90.0 || w.Lat > 90.0 || w.Lon < -180.0 || w.Lon > 180.0) then
+    elif dtos |> Array.exists (fun w -> w.Coordinate.Latitude < -90.0 || w.Coordinate.Latitude > 90.0
+                                                        || w.Coordinate.Longitude < -180.0 || w.Coordinate.Longitude > 180.0) then
         Error "One or more waypoints have invalid coordinates"
     else
         Ok (dtos |> Array.mapi (fun i w -> toWaypoint { w with Order = i }) |> Array.toList)

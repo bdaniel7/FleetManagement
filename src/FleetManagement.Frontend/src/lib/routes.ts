@@ -1,5 +1,4 @@
 // src/lib/routes.ts — central route table
-import type { ComponentType } from 'svelte';
 import Dashboard    from '../components/Dashboard.svelte';
 import FleetMap     from '../components/FleetMap.svelte';
 import VehicleTable from '../components/VehicleTable.svelte';
@@ -27,7 +26,7 @@ export const navItems: NavItem[] = [
 ];
 
 // Route map consumed by svelte-spa-router <Router>
-const routes: Record<string, ComponentType> = {
+const routes: Record<string, any> = {
   '/':           Dashboard,
   '/dashboard':  Dashboard,
   '/live-map':   FleetMap,

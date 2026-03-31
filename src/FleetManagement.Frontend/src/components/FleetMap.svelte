@@ -54,7 +54,9 @@
 
   async function initMap() {
     L = await import('leaflet');
-    map = L.map(mapEl, { center: [51.1657, 10.4515], zoom: 6, preferCanvas: true, zoomControl: false });
+    map = L.map(mapEl, {
+      center: [50.920185, 10.566824], zoom: 7,
+      preferCanvas: true, zoomControl: false });
     // Light CartoDB tile layer
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
       attribution: '© OpenStreetMap contributors © CARTO',
@@ -84,7 +86,15 @@
         const marker = L!.marker([lat, lon], { icon })
           .addTo(map)
           .bindPopup(popupContent(v), { className: 'fleet-popup' })
-          .on('click', () => { selectedVehicleId.set(v.id); subscribeVehicle(v.id); });
+          .on('click', () => {
+            selectedVehicleId.set(v.id); subscribeVehicle(v.id);
+            console.log(v);
+          })
+          // .on('mouseover', () => {
+          //   selectedVehicleId.set(v.id); subscribeVehicle(v.id);
+          //   console.log(v);
+          // })
+          ;
         markers[v.id] = marker;
       }
     });

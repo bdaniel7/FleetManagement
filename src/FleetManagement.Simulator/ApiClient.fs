@@ -23,6 +23,35 @@ let makeClient (baseUrl: string) =
     client.Timeout     <- TimeSpan.FromSeconds 10.0
     client
 
+// ── Wait for API to be available ─────────────────────────────
+
+let waitForApi (client: HttpClient) retryCount waitSeconds = async {
+    let mutable success = false
+    let mutable attempt = 0
+    let mutable waitTime = waitSeconds
+
+    while not success && attempt < retryCount do
+        attempt <- attempt + 1
+        try
+            let! response = client.GetAsync("api/fleet/health") |> Async.AwaitTask
+            if response.IsSuccessStatusCode then
+                success <- true
+            else
+                eprintfn "  [Retry] Attempt %d: API returned %O" attempt response.StatusCode
+                if attempt < retryCount then
+                    eprintfn "  [Retry] Waiting %.1fs before retry..." waitTime
+                    do! Async.Sleep(int (waitTime * 1000.0))
+                    waitTime <- waitTime * 2.0  // exponential backoff
+        with ex ->
+            eprintfn "  [Retry] Attempt %d failed: %s" attempt ex.Message
+            if attempt < retryCount then
+                eprintfn "  [Retry] Waiting %.1fs before retry..." waitTime
+                do! Async.Sleep(int (waitTime * 1000.0))
+                waitTime <- waitTime * 2.0  // exponential backoff
+
+    return success
+}
+
 // ── Fetch all vehicles ────────────────────────────────────────
 
 let fetchVehicles (client: HttpClient) = async {
@@ -130,4 +159,30 @@ let patchStatus (client: HttpClient) (vehicleId: string) (status: string) = asyn
         return ()
     with ex ->
         eprintfn "  [ApiClient] patchStatus(%s) failed: %s" vehicleId ex.Message
+}
+
+// ── POST telemetry to set initial fuel ─────────────────────────
+
+let setFuelForAllVehicles (client: HttpClient) (fuelPct: float) (vehicleIds: Guid[]) = async {
+    let tasks =
+        vehicleIds
+        |> Array.map (fun id ->
+            async {
+                try
+                    let payload = JsonSerializer.Serialize({|
+                        speedKmh   = 0.0
+                        fuelPct    = fuelPct
+                        engineTemp = 20.0
+                        odometerKm = 0.0
+                        diagCodes  = ([] : string list)
+                    |}, jsonOpts)
+                    use content = new StringContent(payload, Encoding.UTF8, "application/json")
+                    let! _ = client.PostAsync($"api/vehicles/{id}/telemetry", content) |> Async.AwaitTask
+                    return true
+                with ex ->
+                    eprintfn "  [ApiClient] setFuelForAllVehicles(%O) failed: %s" id ex.Message
+                    return false
+            })
+    let! results = Async.Parallel tasks
+    return results |> Array.filter id |> Array.length
 }

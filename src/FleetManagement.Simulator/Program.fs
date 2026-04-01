@@ -23,6 +23,8 @@ let private printHelp () =
         "--speed-min", "<km/h>",  "Minimum vehicle speed (default: 40)"
         "--speed-max", "<km/h>",  "Maximum vehicle speed (default: 120)"
         "--fuel-burn", "<rate>",  "Fuel burn %% per km (default: 0.08)"
+        "--set-fuel",  "<%>",     "Set initial fuel level for all vehicles (0-100)"
+        "--retry",     "<n>",     "Number of retries for API connection (default: 5)"
         "--verbose",   "",        "Print per-vehicle details every tick"
         "--help",      "",        "Show this help"
     ]
@@ -107,6 +109,20 @@ let private parseArgs (argv: string[]) =
                 AnsiConsole.MarkupLine("[red]Error: --fuel-burn must be a non-negative number[/]")
                 ok <- false
 
+        | "--set-fuel" ->
+            match Double.TryParse(next()) with
+            | true, v when v >= 0.0 && v <= 100.0 -> opts <- { opts with InitialFuelPct = Some v }
+            | _ ->
+                AnsiConsole.MarkupLine("[red]Error: --set-fuel must be a value between 0 and 100%[/]")
+                ok <- false
+
+        | "--retry" ->
+            match Int32.TryParse(next()) with
+            | true, n when n >= 0 -> opts <- { opts with RetryCount = n }
+            | _ ->
+                AnsiConsole.MarkupLine("[red]Error: --retry must be a non-negative integer[/]")
+                ok <- false
+
         | "--verbose" | "-v" ->
             opts <- { opts with Verbose = true }
 
@@ -131,6 +147,9 @@ let private printBanner (opts: SimOptions) =
     AnsiConsole.MarkupLine($"""  Duration   : [cyan]{if opts.TotalTicks <= 0 then "infinite (Ctrl+C to stop)" else string opts.TotalTicks + " ticks"}[/]""")
     AnsiConsole.MarkupLine($"  Speed range: [cyan]{opts.SpeedMin}–{opts.SpeedMax} km/h[/]")
     AnsiConsole.MarkupLine($"  Fuel burn  : [cyan]{opts.FuelBurnRate}%% per km[/]")
+    match opts.InitialFuelPct with
+    | Some fuel -> AnsiConsole.MarkupLine($"  Initial fuel: [cyan]{fuel}%%[/]")
+    | None -> ()
     printfn ""
 
 // ── Entry point ───────────────────────────────────────────────

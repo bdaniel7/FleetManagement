@@ -10,6 +10,7 @@ open Akka.Actor
 open FleetManagement.Core.Domain
 open FleetManagement.Actors.ActorMessages
 open FleetManagement.Core.Validation
+open Serilog
 
 // ============================================================
 //  DTOs
@@ -167,14 +168,10 @@ let mapVehicleEndpoints (app: IEndpointRouteBuilder) (repo: IVehicleRepository) 
 
     // POST /api/vehicles/{id}/telemetry
     app.MapPost("/api/vehicles/{id:guid}/telemetry", Func<Guid, {| speedKmh: float; fuelPct: float; engineTemp: float; odometerKm: float; diagCodes: string list |}, Task<IResult>> (fun (id) (ev) -> task {
-        let telemetry = {
-            OdometerKm      = ev.odometerKm
-            EngineTemp      = ev.engineTemp
-            BatteryLevel    = None
-            LastHeartbeat   = DateTimeOffset.UtcNow
-            DiagnosticCodes = ev.diagCodes
-        }
-        do! repo.UpdateFuel(VehicleId id, ev.fuelPct)
-        return Results.Accepted()
+        try
+            do! repo.UpdateFuel(VehicleId id, ev.fuelPct)
+            return Results.Accepted()
+        with ex ->
+            return Results.Problem($"Failed to update telemetry: {ex.Message}")
     }))
     |> fun e -> e.WithTags(tag) |> ignore

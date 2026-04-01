@@ -74,17 +74,23 @@ type SimOptions = {
     SpeedMin      : float      // km/h min speed
     SpeedMax      : float      // km/h max speed
     FuelBurnRate  : float      // % per km
+    InitialFuelPct: float option // set initial fuel for all vehicles
+    RetryCount    : int        // number of retries for API calls
+    RetryWaitSecs : float      // initial wait seconds between retries
     Verbose       : bool
 }
 
 module SimOptions =
     let defaults = {
-        ApiBaseUrl   = "http://localhost:5000"
-        VehicleCount = -1
-        TickMs       = 2000
-        TotalTicks   = -1
-        SpeedMin     = 40.0
-        SpeedMax     = 120.0
-        FuelBurnRate = 0.08    // 0.08% per km
-        Verbose      = false
+        ApiBaseUrl    = "http://localhost:5000"
+        VehicleCount  = -1
+        TickMs        = 2000
+        TotalTicks    = -1
+        SpeedMin      = 40.0
+        SpeedMax      = 120.0
+        FuelBurnRate  = 0.08    // 0.08% per km
+        InitialFuelPct = None
+        RetryCount    = 5
+        RetryWaitSecs = 5.0
+        Verbose       = false
     }

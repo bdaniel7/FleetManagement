@@ -51,15 +51,6 @@ let private randomRoute () : (float * float) list =
     let indices = Array.init count (fun _ -> rng.Next(0, germanCities.Length))
     indices |> Array.map (fun i -> germanCities.[i]) |> Array.toList
 
-// ── Check if we've lost connectivity ─────────────────────────
-
-let private checkHealth (client: System.Net.Http.HttpClient) = async {
-    try
-        let! response = client.GetAsync("api/fleet/health") |> Async.AwaitTask
-        return response.IsSuccessStatusCode
-    with _ -> return false
-}
-
 // ── Single tick for all vehicles ─────────────────────────────
 
 let private runTick
@@ -104,10 +95,12 @@ let run (opts: SimOptions) (cancelToken: CancellationToken) = async {
     use client = makeClient opts.ApiBaseUrl
     let tickSec = float opts.TickMs / 1000.0
 
-    printfn "  Connecting to %s…" opts.ApiBaseUrl
-    let! alive = checkHealth client
+    printfn "  Connecting to %s (retrying up to %d times)…"
+        opts.ApiBaseUrl opts.RetryCount
+
+    let! alive = waitForApi client opts.RetryCount opts.RetryWaitSecs
     if not alive then
-        printfn "  ✗ Cannot reach API at %s — is the server running?" opts.ApiBaseUrl
+        printfn "  ✗ Cannot reach API at %s after %d retries." opts.ApiBaseUrl opts.RetryCount
         return ()
 
     printfn "  ✓ API reachable"
@@ -132,9 +125,27 @@ let run (opts: SimOptions) (cancelToken: CancellationToken) = async {
             let waypoints = randomRoute ()
             makeSimVehicle v waypoints)
 
+    // Set initial fuel for all vehicles if requested
+    match opts.InitialFuelPct with
+    | Some fuel ->
+        let validVehicles, invalidIds =
+            simVehicles
+            |> Array.partition (fun sv ->
+                match Guid.TryParse(sv.Id) with
+                | true, _ -> true
+                | false, _ -> false)
+        let ids = validVehicles |> Array.map (fun sv -> Guid.Parse(sv.Id))
+        if invalidIds.Length > 0 then
+            printfn "  Warning: %d vehicles have invalid IDs and were skipped: %s"
+                invalidIds.Length (String.concat ", " (invalidIds |> Array.map (fun sv -> sv.Id)))
+        if ids.Length > 0 then
+            let! count = ApiClient.setFuelForAllVehicles client fuel ids
+            printfn "  Set initial fuel to %.1f%% for %d vehicles" fuel count
+    | None -> ()
+
     printfn ""
     printfn "  ╔═══════════════════════════════════════════════════╗"
-    printfn "  ║  FlitOS Vehicle Simulator                        ║"
+    printfn "  ║  FlitOS Vehicle Simulator                         ║"
     printfn "  ║  %d vehicles  |  tick %dms  |  Ctrl+C to stop   ║" take opts.TickMs
     printfn "  ╚═══════════════════════════════════════════════════╝"
     printfn ""

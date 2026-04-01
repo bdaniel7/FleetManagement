@@ -19,6 +19,7 @@
   <ItemGroup>
     <PackageReference Update="FSharp.Core"                      Version="10.1.201" />
     <PackageReference Include="Microsoft.Extensions.Http"       Version="10.*" />
+    <PackageReference Include="Polly" Version="8.5.0" />
     <PackageReference Include="Spectre.Console" Version="0.54.0" />
   </ItemGroup>
 </Project>

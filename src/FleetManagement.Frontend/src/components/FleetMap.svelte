@@ -401,4 +401,50 @@
 
 
   .map-container { flex: 1; min-height: 0; }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    .map-header {
+      flex-wrap: wrap;
+      padding: 10px 12px;
+      gap: 8px;
+    }
+
+    h1 { font-size: 15px; }
+
+    .search-wrapper {
+      width: 100%;
+      order: 10;
+    }
+
+    .controls {
+      margin-right: 0;
+    }
+
+    .map-legend {
+      gap: 8px;
+      padding: 8px 12px;
+    }
+
+    .trip-legend {
+      padding: 6px 12px;
+      gap: 10px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .map-header {
+      padding: 8px 10px;
+    }
+
+    h1 { font-size: 14px; }
+
+    .ctrl-toggle {
+      font-size: 11px;
+    }
+
+    .map-legend {
+      display: none;
+    }
+  }
 </style>

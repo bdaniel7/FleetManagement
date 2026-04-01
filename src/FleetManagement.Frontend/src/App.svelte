@@ -4,6 +4,8 @@
   import { loadAll, connectHub, disconnectHub, hubStatus, fleetSummary, alerts, error } from './stores/fleet';
   import routes, { navItems } from '$lib/routes';
 
+  let mobileMenuOpen = false;
+
   onMount(() => {
     void (async() => {
       await connectHub();
@@ -15,6 +17,10 @@
   });
 
   onDestroy(disconnectHub);
+
+  function closeMobileMenu() {
+    mobileMenuOpen = false;
+  }
 
   const hubColors: Record<string, string> = {
     connected:    'var(--accent)',
@@ -29,8 +35,29 @@
 </script>
 
 <div class="shell">
+  <!-- Mobile header -->
+  <header class="mobile-header">
+    <button class="hamburger" on:click={() => mobileMenuOpen = !mobileMenuOpen} aria-label="Toggle menu">
+      <span class="hamburger-line"></span>
+      <span class="hamburger-line"></span>
+      <span class="hamburger-line"></span>
+    </button>
+    <div class="mobile-brand">
+      <span class="brand-icon">⬡</span>
+      <span class="brand-text">FLiT<em>OS</em></span>
+    </div>
+    <div class="hub-status-mobile">
+      <span class="hub-dot" style="background:{hubColor}"></span>
+    </div>
+  </header>
+
+  <!-- Sidebar overlay for mobile -->
+  {#if mobileMenuOpen}
+    <div class="sidebar-overlay" on:click={closeMobileMenu} on:keydown={(e) => e.key === 'Escape' && closeMobileMenu()} role="presentation"></div>
+  {/if}
+
   <!-- Sidebar -->
-  <nav class="sidebar">
+  <nav class="sidebar" class:open={mobileMenuOpen}>
     <div class="brand">
       <span class="brand-icon">⬡</span>
       <span class="brand-text">FLiT<em>OS</em></span>
@@ -43,6 +70,7 @@
           use:link
           class="nav-btn"
           class:active={activePath === item.path || (item.path === '/dashboard' && (activePath === '/' || activePath === ''))}
+          on:click={closeMobileMenu}
         >
           <span class="nav-icon">{item.icon}</span>
           <span class="nav-label">{item.label}</span>
@@ -81,8 +109,78 @@
   .shell {
     display: grid;
     grid-template-columns: 220px 1fr;
+    grid-template-rows: 1fr;
     height: 100dvh;
     overflow: hidden;
+  }
+
+  /* ── Mobile Header ── */
+  .mobile-header {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    padding: 0 16px;
+    height: 56px;
+    background: var(--sidebar-bg);
+    border-bottom: 1px solid var(--sidebar-border);
+  }
+
+  .hamburger {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: 36px;
+    height: 36px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+  }
+  .hamburger:hover { background: var(--bg-hover); }
+  .hamburger-line {
+    display: block;
+    width: 22px;
+    height: 2px;
+    background: var(--text);
+    border-radius: 1px;
+  }
+
+  .mobile-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+  }
+  .mobile-brand .brand-icon { font-size: 22px; color: var(--accent); }
+  .mobile-brand .brand-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    color: var(--text);
+    text-transform: uppercase;
+  }
+  .mobile-brand .brand-text em { font-style: normal; color: var(--accent); }
+
+  .hub-status-mobile {
+    display: flex;
+    align-items: center;
+  }
+  .hub-status-mobile .hub-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
+
+  /* ── Sidebar Overlay ── */
+  .sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 40;
   }
 
   /* ── Sidebar ── */
@@ -92,6 +190,7 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    z-index: 50;
   }
 
   .brand {
@@ -196,5 +295,45 @@
     padding: 8px 20px;
     font-size: 12px;
     flex-shrink: 0;
+  }
+
+  /* ── Mobile Responsive ── */
+  @media (max-width: 768px) {
+    .shell {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto 1fr;
+    }
+
+    .mobile-header {
+      display: flex;
+    }
+
+    .sidebar-overlay {
+      display: block;
+    }
+
+    .sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: 260px;
+      transform: translateX(-100%);
+      transition: transform 0.25s ease;
+    }
+
+    .sidebar.open {
+      transform: translateX(0);
+    }
+
+    .main {
+      grid-row: 2;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .sidebar {
+      width: 100%;
+    }
   }
 </style>

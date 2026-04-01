@@ -203,4 +203,20 @@
   .fuel-bar-fill  { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #dc2626, #d97706); transition: width 0.5s; }
   .fuel-pct   { font-size: 12px; font-weight: 700; width: 42px; text-align: right; flex-shrink: 0; font-family: 'DM Mono', monospace; }
   .empty-state { font-size: 12px; color: var(--accent); padding: 8px 0; }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    .dashboard { padding: 16px; gap: 12px; }
+    .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    .kpi-value { font-size: 24px; }
+    .charts-row, .bottom-row { grid-template-columns: 1fr; }
+  }
+
+  @media (max-width: 480px) {
+    .dashboard { padding: 12px; }
+    .kpi-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .kpi-card { padding: 12px 14px; }
+    .kpi-value { font-size: 20px; }
+    .page-header { flex-direction: column; gap: 4px; }
+  }
 </style>

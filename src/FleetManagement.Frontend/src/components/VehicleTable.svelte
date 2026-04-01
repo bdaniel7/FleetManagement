@@ -80,8 +80,9 @@
     {#if $loading}
         <div class="loading">Loading vehicles…</div>
     {:else}
+        <!-- Desktop table view -->
         <div class="table-wrap">
-            <table>
+            <table class="desktop-table">
                 <thead>
                 <tr>
                     {#each [['licensePlate', 'Plate'], ['vehicleType', 'Type'], ['status', 'Status'], ['fuelLevelPct', 'Fuel'], ['speedKmh', 'Speed'], ['maxPayloadKg', 'Payload']] as [k, label]}
@@ -131,6 +132,56 @@
                 {/each}
                 </tbody>
             </table>
+
+            <!-- Mobile card view -->
+            <div class="card-grid">
+                {#each filtered as v (v.id)}
+                    <div class="vehicle-card">
+                        <div class="card-header">
+                            <span class="plate-cell">{v.licensePlate}</span>
+                            <button class="del-btn" disabled={deleting === v.id} on:click={() => deleteVehicle(v.id)}>
+                                {deleting === v.id ? '…' : '✕'}
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <div class="card-row">
+                                <span class="card-label">Type</span>
+                                <span class="card-value">{v.vehicleType}</span>
+                            </div>
+                            <div class="card-row">
+                                <span class="card-label">Status</span>
+                                <select class="inline-status" value={v.status}
+                                        style="color:{statusColors[v.status]};border-color:{statusColors[v.status]}44"
+                                        on:change={onStatusChange(v.id)}>
+                                    {#each statuses as s}
+                                        <option value={s}>{s}</option>
+                                    {/each}
+                                </select>
+                            </div>
+                            <div class="card-row">
+                                <span class="card-label">Fuel</span>
+                                <div class="fuel-cell">
+                                    <div class="mini-bar-track">
+                                        <div class="mini-bar-fill"
+                                             style="width:{v.fuelLevelPct}%;background:{fuelColor(v.fuelLevelPct)}"></div>
+                                    </div>
+                                    <span class="fuel-num" style="color:{fuelColor(v.fuelLevelPct)}">{v.fuelLevelPct.toFixed(0)}%</span>
+                                </div>
+                            </div>
+                            <div class="card-row">
+                                <span class="card-label">Speed</span>
+                                <span class="num-cell">{v.speedKmh.toFixed(0)} km/h</span>
+                            </div>
+                            <div class="card-row">
+                                <span class="card-label">Payload</span>
+                                <span class="num-cell">{v.maxPayloadKg.toFixed(0)} kg</span>
+                            </div>
+                        </div>
+                    </div>
+                {:else}
+                    <div class="empty-cell">No vehicles match the current filter.</div>
+                {/each}
+            </div>
         </div>
     {/if}
 </div>
@@ -339,5 +390,86 @@
     .del-btn:disabled {
         opacity: 0.4;
         cursor: not-allowed;
+    }
+
+    /* ── Mobile Card View ── */
+    .desktop-table { display: table; }
+    .card-grid { display: none; }
+
+    @media (max-width: 768px) {
+        .vehicles-page { padding: 0; }
+
+        .page-header {
+            flex-wrap: wrap;
+            padding: 12px 16px;
+            gap: 8px;
+        }
+
+        .header-left { gap: 8px; }
+        h1 { font-size: 16px; }
+
+        .filters { flex-wrap: wrap; width: 100%; }
+        .search-input, .filter-select { flex: 1; min-width: 120px; }
+
+        .desktop-table { display: none; }
+        .card-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 16px;
+        }
+
+        .vehicle-card {
+            background: var(--bg-panel);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 14px;
+            background: var(--bg-subtle);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .card-body {
+            padding: 12px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .card-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .card-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+
+        .card-value {
+            font-size: 13px;
+            color: var(--text);
+        }
+    }
+
+    @media (max-width: 480px) {
+        .search-input, .filter-select {
+            width: 100%;
+        }
+
+        .filters {
+            flex-direction: column;
+        }
     }
 </style>

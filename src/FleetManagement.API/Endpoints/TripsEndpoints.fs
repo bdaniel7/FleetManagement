@@ -8,6 +8,8 @@ open Microsoft.AspNetCore.Routing
 open FleetManagement.Core.Domain
 open FleetManagement.Infrastructure.IRepositories
 open System.Text.Json.Serialization
+open FleetManagement.Core.Tracing
+open FleetManagement.API.Tracing
 
 // ── DTOs ──────────────────────────────────────────────────────
 
@@ -46,12 +48,12 @@ let private toWaypoint (d: TripWaypointDto) : TripWaypoint = {
     Order      = d.Order
     Label      = if String.IsNullOrWhiteSpace d.Label then $"Stop {d.Order + 1}" else d.Label
     Coordinate = { Latitude = d.Coordinate.Latitude; Longitude = d.Coordinate.Longitude }
-    Notes      = if d.Notes = null then "" else d.Notes
+    Notes      = d.Notes
     DwellMin   = d.DwellMin
 }
 
 let private validateWaypoints (dtos: TripWaypointDto[]) =
-    if dtos = null || dtos.Length < 2 then
+    if dtos.Length < 2 then
         Error "A trip requires at least 2 waypoints"
     elif dtos |> Array.exists (fun w -> w.Coordinate.Latitude < -90.0 || w.Coordinate.Latitude > 90.0
                                                         || w.Coordinate.Longitude < -180.0 || w.Coordinate.Longitude > 180.0) then
@@ -68,23 +70,43 @@ let mapTripsEndpoints (app: IEndpointRouteBuilder) (repo: ITripsRepository) =
     // GET /api/trips
     app.MapGet("/api/trips", Func<Task<IResult>>(fun () -> task {
         let! trips = repo.GetAll()
-        return Results.Ok trips
+
+        startActivity "GetAllTrips"
+            |> setTagInt "trip.count" trips.Length
+            |> dispose
+
+        return Results.Ok(trips)
     }))
     |> fun e -> e.WithTags(tag) |> ignore
 
     // GET /api/trips/{id}
     app.MapGet("/api/trips/{id:guid}", Func<Guid, Task<IResult>>(fun id -> task {
+        let activity = startActivity "GetOneTrip"
+        activity |> setTagGuid "trip.id" id |> ignore
+        //setTag activity "trace.id" (getTraceId activity)
         let! trip = repo.GetById (TripId id)
         return
             match trip with
-            | Some t -> Results.Ok t
-            | None   -> Results.NotFound {| error = $"Trip {id} not found" |}
+            | Some t ->
+                activity |> setTagGuid "trip.id" id |> dispose
+                Results.Ok t
+
+            | None   ->
+                activity |> setError $"Trip {id} not found"
+                activity |> dispose
+                Results.NotFound {| error = $"Trip {id} not found" |}
     }))
     |> fun e -> e.WithTags(tag) |> ignore
 
     // GET /api/trips/vehicle/{vehicleId}
     app.MapGet("/api/trips/vehicle/{vehicleId:guid}", Func<Guid, Task<IResult>>(fun vehicleId -> task {
+        let activity = startActivity "GetTripsPerVehicle"
+        activity |> setTagGuid "trip.vehicleId" vehicleId |> ignore
+
         let! trips = repo.GetByVehicle (VehicleId vehicleId)
+
+        activity |> setTagInt "trip.Count" trips.Length |> dispose
+
         return Results.Ok trips
     }))
     |> fun e -> e.WithTags(tag) |> ignore
@@ -109,50 +131,67 @@ let mapTripsEndpoints (app: IEndpointRouteBuilder) (repo: ITripsRepository) =
 
     // POST /api/trips
     app.MapPost("/api/trips", Func<CreateTripRequest, Task<IResult>>(fun req -> task {
+        let activity = startActivity "CreateTrip"
+
         if String.IsNullOrWhiteSpace req.Name then
+            setError "Trip name is required" activity
             return Results.BadRequest {| error = "Trip name is required" |}
         else
+            activity |> setTag  "trip.name" req.Name
+                     |> setTagInt "trip.waypoints_count" req.Waypoints.Length
+                     |> ignore
 
-        match validateWaypoints req.Waypoints with
-        | Error msg -> return Results.UnprocessableEntity {| error = msg |}
-        | Ok waypoints ->
+            match validateWaypoints req.Waypoints with
+            | Error msg ->
+                setError msg activity
+                return Results.UnprocessableEntity {| error = msg |}
+            | Ok waypoints ->
 
-        let trip : Trip = {
-            Id          = TripId (Guid.NewGuid())
-            Name        = req.Name.Trim()
-            Description = if req.Description = null then "" else req.Description.Trim()
-            VehicleId   = if req.VehicleId.HasValue then Some (VehicleId req.VehicleId.Value) else None
-            DriverId    = if req.DriverId.HasValue  then Some (DriverId  req.DriverId.Value)  else None
-            Status      = TripStatus.Draft
-            IsCircular  = req.IsCircular
-            Waypoints   = waypoints
-            TotalDistanceKm = 0.0   // computed by repository on upsert
-            CreatedAt   = DateTimeOffset.UtcNow
-            UpdatedAt   = DateTimeOffset.UtcNow
-            StartedAt   = None
-            CompletedAt = None
-        }
+            let trip : Trip = {
+                Id          = TripId (Guid.NewGuid())
+                Name        = req.Name.Trim()
+                Description = req.Description.Trim()
+                VehicleId   = if req.VehicleId.HasValue then Some (VehicleId req.VehicleId.Value) else None
+                DriverId    = if req.DriverId.HasValue  then Some (DriverId  req.DriverId.Value)  else None
+                Status      = TripStatus.Draft
+                IsCircular  = req.IsCircular
+                Waypoints   = waypoints
+                TotalDistanceKm = 0.0   // computed by repository on upsert
+                CreatedAt   = DateTimeOffset.UtcNow
+                UpdatedAt   = DateTimeOffset.UtcNow
+                StartedAt   = None
+                CompletedAt = None
+            }
 
-        do! repo.Upsert trip
-        let (TripId tid) = trip.Id
-        return Results.Created($"/api/trips/{tid}", trip)
+            do! repo.Upsert trip
+            let (TripId tid) = trip.Id
+            setTag "trip.id" (string tid) activity |> dispose
+            return Results.Created($"/api/trips/{tid}", trip)
     }))
     |> fun e -> e.WithTags(tag) |> ignore
 
     // PUT /api/trips/{id}
     app.MapPut("/api/trips/{id:guid}", Func<Guid, UpdateTripRequest, Task<IResult>>(fun id req -> task {
+
+        let activity = startActivity "UpdateTrip"
+
         let! existing = repo.GetById (TripId id)
         match existing with
-        | None -> return Results.NotFound {| error = $"Trip {id} not found" |}
+        | None ->
+            setError $"Trip {id} not found" activity
+            return Results.NotFound {| error = $"Trip {id} not found" |}
         | Some trip ->
 
         match trip.Status with
         | TripStatus.InProgress | TripStatus.TripCompleted | TripStatus.TripCancelled ->
+            setError $"Cannot edit a trip with status {trip.Status}" activity
             return Results.Conflict {| error = $"Cannot edit a trip with status {trip.Status}" |}
         | _ ->
 
         match validateWaypoints req.Waypoints with
-        | Error msg -> return Results.UnprocessableEntity {| error = msg |}
+        | Error msg ->
+            setError msg activity
+            return Results.UnprocessableEntity {| error = msg |}
         | Ok waypoints ->
 
         let updated = { trip with
@@ -164,6 +203,9 @@ let mapTripsEndpoints (app: IEndpointRouteBuilder) (repo: ITripsRepository) =
                             Waypoints   = waypoints
                             UpdatedAt   = DateTimeOffset.UtcNow }
         do! repo.Upsert updated
+
+        setTag "trip.saved" "Ok" activity |> dispose
+
         return Results.Ok updated
     }))
     |> fun e -> e.WithTags(tag) |> ignore

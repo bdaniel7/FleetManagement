@@ -9,6 +9,7 @@
     <LangVersion>10.0</LangVersion>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Tracing.fs" />
     <Compile Include="Domain.fs" />
     <Compile Include="Graph.fs" />
     <Compile Include="Pathfinding.fs" />

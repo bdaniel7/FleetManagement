@@ -2,6 +2,7 @@ module FleetManagement.API.Middleware.SecurityMiddleware
 
 open Microsoft.AspNetCore.Builder
 open Microsoft.AspNetCore.Http
+open System.Diagnostics
 open System.Threading.Tasks
 
 // ============================================================
@@ -13,11 +14,11 @@ type SecurityHeadersMiddleware(next: RequestDelegate) =
         let h = ctx.Response.Headers
         h["X-Content-Type-Options"]           <- "nosniff"
         h["X-Frame-Options"]                  <- "DENY"
-        h["X-XSS-Protection"]                 <- "1; mode=block"
-        h["Referrer-Policy"]                  <- "strict-origin-when-cross-origin"
-        h["Permissions-Policy"]               <- "geolocation=(), microphone=()"
-        h["Content-Security-Policy"]          <- "default-src 'self'; connect-src 'self' ws: wss:"
-        h["Strict-Transport-Security"]        <- "max-age=31536000; includeSubDomains"
+        h["X-XSS-Protection"]               <- "1; mode=block"
+        h["Referrer-Policy"]                <- "strict-origin-when-cross-origin"
+        h["Permissions-Policy"]              <- "geolocation=(), microphone=()"
+        h["Content-Security-Policy"]         <- "default-src 'self'; connect-src 'self' ws: wss:"
+        h["Strict-Transport-Security"]       <- "max-age=31536000; includeSubDomains"
         next.Invoke(ctx)
 
 // ============================================================
@@ -32,6 +33,9 @@ type CorrelationMiddleware(next: RequestDelegate) =
             | _ -> System.Guid.NewGuid().ToString("N")
         ctx.Items.["CorrelationId"] <- correlationId
         ctx.Response.Headers["X-Correlation-ID"] <- correlationId
+
+        if Activity.Current <> null then
+            ctx.Response.Headers["X-Trace-Id"] <- Activity.Current.TraceId.ToString()
         next.Invoke(ctx)
 
 // ============================================================

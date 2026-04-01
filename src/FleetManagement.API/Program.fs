@@ -3,7 +3,6 @@ module FleetManagement.API.Program
 open System
 open System.Text.Json
 open System.Text.Json.Serialization
-open FleetManagement.API.Endpoints
 open FleetManagement.API.Endpoints.TripEndpoints
 open FleetManagement.Core.Domain
 open FleetManagement.Infrastructure.IRepositories
@@ -15,6 +14,9 @@ open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.Configuration
 open Microsoft.OpenApi
 open Microsoft.Extensions.Logging
+open Npgsql
+open OpenTelemetry.Exporter
+open OpenTelemetry.Resources
 open Serilog
 open Serilog.Events
 open FleetManagement.Core.Events
@@ -31,24 +33,61 @@ open FleetManagement.API.Hubs.TelemetryHub
 open FleetManagement.API.Endpoints.VehicleEndpoints
 open FleetManagement.API.Endpoints.RouteEndpoints
 open FleetManagement.API.Endpoints.FleetEndpoints
+open FleetManagement.API.Tracing
+open OpenTelemetry.Trace
+open System.Diagnostics
 
-let configureSerilog () =
+let configureSerilog (cfg: IConfiguration) =
+    let seqUrl = cfg.["Seq:Url"] |> Option.ofObj |> Option.defaultValue "http://localhost:5341"
+    
     Log.Logger <-
         LoggerConfiguration()
             .MinimumLevel.Information()
             .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
-            .MinimumLevel.Override("Akka",      LogEventLevel.Information)
+            .MinimumLevel.Override("System", LogEventLevel.Warning)
+            .MinimumLevel.Override("Akka", LogEventLevel.Information)
             .Enrich.FromLogContext()
-            .WriteTo.Console(outputTemplate = "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}")
+            .Enrich.WithProperty("Application", "FleetManagement.API")
+            .Enrich.WithProperty("ServiceName", serviceName)
+            .Enrich.WithProperty("TraceId", fun logEvent -> 
+                if Activity.Current <> null then Activity.Current.TraceId.ToString() else "")
+            .Enrich.WithProperty("SpanId", fun logEvent ->
+                if Activity.Current <> null then Activity.Current.SpanId.ToString() else "")
+            .WriteTo.Console(outputTemplate = "[{Timestamp:HH:mm:ss} {Level:u3}] [{TraceId}] {SourceContext}: {Message:lj}{NewLine}{Exception}")
             .WriteTo.File("logs/fleet-.log",
                 rollingInterval     = RollingInterval.Day,
                 retainedFileCountLimit = 14,
                 outputTemplate      = "[{Timestamp:yyyy-MM-dd HH:mm:ss} {Level:u3}] {SourceContext}: {Message:lj}{NewLine}{Exception}")
+            .WriteTo.Seq(seqUrl)
             .CreateLogger()
+
+let configureOpenTelemetry (services: IServiceCollection) (seqUrl: string) =
+    let otlpEndpoint = seqUrl.TrimEnd('/') + "/ingest/otlp/v1/traces"
+    services.AddOpenTelemetry()
+            .WithTracing(fun t ->
+                t.SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("FleetManagement")) |> ignore
+                t.AddAspNetCoreInstrumentation(fun opts ->
+                    opts.RecordException <- true
+                    opts.Filter <- fun ctx -> not (ctx.Request.Path.StartsWithSegments("/health")))
+                 .AddHttpClientInstrumentation()
+                 .AddSource(Tracing.serviceName)
+                 .AddSource(FleetManagement.Actors.Tracing.serviceName)
+                 .AddSource(FleetManagement.Infrastructure.Tracing.serviceName)
+                 //.AddConsoleExporter()
+                 .AddOtlpExporter(fun o ->
+                    o.Endpoint <- Uri(otlpEndpoint)
+                    o.Protocol <- OtlpExportProtocol.HttpProtobuf)
+             |> ignore)
+            .WithMetrics(fun t ->
+                    t.AddMeter(Tracing.serviceName) |> ignore
+                    t.AddMeter(FleetManagement.Infrastructure.Tracing.serviceName)
+                     .AddNpgsqlInstrumentation |> ignore)
+        |> ignore
 
 [<EntryPoint>]
 let main args =
-    configureSerilog()
+    let builder = WebApplication.CreateBuilder(args)
+    configureSerilog(builder.Configuration)
 
     try
         let builder = WebApplication.CreateBuilder(args)
@@ -67,6 +106,10 @@ let main args =
         let allowedOrigins= cfg.["AllowedOrigins"]     |> Option.ofObj |> Option.defaultValue "http://localhost:5173"
 
         let services = builder.Services
+
+        // OpenTelemetry
+        let seqUrl = cfg.["Seq:Url"] |> Option.ofObj |> Option.defaultValue "http://localhost:5341"
+        configureOpenTelemetry services seqUrl
 
         // PostgreSQL
         let dbConfig = DbConfig.fromConnectionString connStr

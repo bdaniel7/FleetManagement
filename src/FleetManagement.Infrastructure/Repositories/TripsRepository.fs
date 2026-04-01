@@ -3,8 +3,10 @@ module FleetManagement.Infrastructure.Repositories.TripRepository
 open System
 open System.Text.Json
 open FleetManagement.Core.Domain
+open FleetManagement.Core.Tracing
 open FleetManagement.Infrastructure.DbContext
 open FleetManagement.Infrastructure.IRepositories
+open FleetManagement.Infrastructure.Tracing
 
 // ── DB row ────────────────────────────────────────────────────
 
@@ -123,18 +125,29 @@ type PostgresTripsRepository(ctx: IDbContext) =
     interface ITripsRepository with
 
         member _.GetAll () = async {
+            let ac = startActivity "RepoGetAll"
+
             let! conn = ctx.OpenConnection()
             use conn = conn :?> Npgsql.NpgsqlConnection
             let! rows = Db.query<TripRow>
                             $"{selectAll} ORDER BY created_at DESC" {| |} conn
+
+            ac |> setTagInt "repo.rows.count" rows.Length
+               |> dispose
             return rows |> List.map Mapping.toDomain
         }
 
         member _.GetById (TripId tid) = async {
+
+            let ac = startActivity "RepoGetById" |> setTagGuid "trip.Id" tid
+
             let! conn = ctx.OpenConnection()
             use conn = conn :?> Npgsql.NpgsqlConnection
             let! row = Db.queryFirst<TripRow>
                            $"{selectAll} WHERE id = @id" {| id = tid |} conn
+
+            ac |> setTagBool "trip.exists" (Option.isSome row) |> dispose
+
             return row |> Option.map Mapping.toDomain
         }
 

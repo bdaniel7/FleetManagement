@@ -1,31 +1,31 @@
 -- ============================================================
---  FleetOS — Seed Data
+--  FlitOS — Seed Data
 --  20 Vehicles · 20 Drivers · 20 Routes (Germany)
 -- ============================================================
 
 -- ── Drivers ──────────────────────────────────────────────────
 
 INSERT INTO public.fms_drivers (id, first_name, last_name, license_number, phone_number, email, is_available, hours_worked, max_hours_per_day, created_at) VALUES
-  ('0345AB6A-D8E5-46D5-BAB5-0C62694538CC', 'Klaus',     'Müller',      'DE-LIC-10001', '+49 30 11122201', 'k.mueller@fleetos.de',      true,  2.5,  9.0, NOW()),
-  ('e88f746e-801a-4f1d-a21f-d35aebbdd0b6', 'Sabine',    'Schmidt',     'DE-LIC-10002', '+49 89 11122202', 's.schmidt@fleetos.de',      true,  0.0,  8.0, NOW()),
-  ('dabe68fd-66dd-4835-9264-ae99bdecd1f5', 'Thomas',    'Becker',      'DE-LIC-10003', '+49 40 11122203', 't.becker@fleetos.de',       false, 7.5,  8.0, NOW()),
-  ('f94fec69-9082-40f7-9c95-d6da9720a1f2', 'Petra',     'Hoffmann',    'DE-LIC-10004', '+49 221 1112204', 'p.hoffmann@fleetos.de',     true,  1.0,  9.0, NOW()),
-  ('6400b736-8cb7-4a75-95df-c04e340e7f6d', 'Andreas',   'Wagner',      'DE-LIC-10005', '+49 711 1112205', 'a.wagner@fleetos.de',       true,  3.0,  8.0, NOW()),
-  ('f72940fb-d332-427b-9eb1-e4c180e003f1', 'Monika',    'Fischer',     'DE-LIC-10006', '+49 351 1112206', 'm.fischer@fleetos.de',      false, 8.0,  8.0, NOW()),
-  ('fe835d5a-f655-45d4-8631-72b06a5fa409', 'Stefan',    'Weber',       'DE-LIC-10007', '+49 511 1112207', 's.weber@fleetos.de',        true,  4.5,  9.0, NOW()),
-  ('9984a9d2-f1d1-40ec-9668-97f8afe40480', 'Ursula',    'Meyer',       'DE-LIC-10008', '+49 341 1112208', 'u.meyer@fleetos.de',        true,  0.0,  8.0, NOW()),
-  ('d7f29d51-5301-4c59-9192-7dca104ceb0d', 'Frank',     'Schulz',      'DE-LIC-10009', '+49 911 1112209', 'f.schulz@fleetos.de',       true,  6.0,  9.0, NOW()),
-  ('574ae822-e42b-4328-8337-52301b8a7e76', 'Heike',     'Zimmermann',  'DE-LIC-10010', '+49 621 1112210', 'h.zimmermann@fleetos.de',   false, 8.5,  8.0, NOW()),
-  ('f8a11da5-2cd4-441c-96b5-cfa69be50177', 'Jürgen',    'Braun',       'DE-LIC-10011', '+49 761 1112211', 'j.braun@fleetos.de',        true,  1.5,  8.0, NOW()),
-  ('33200fbf-6b02-40a4-bec0-b0bb7b15ef32', 'Claudia',   'Krause',      'DE-LIC-10012', '+49 431 1112212', 'c.krause@fleetos.de',       true,  2.0,  9.0, NOW()),
-  ('97c64bed-b39c-430f-a183-a72c480f91d7', 'Markus',    'Heinrich',    'DE-LIC-10013', '+49 631 1112213', 'm.heinrich@fleetos.de',     true,  0.0,  8.0, NOW()),
-  ('38719778-8153-41d0-96a7-19b9d70b9b72', 'Birgit',    'Richter',     'DE-LIC-10014', '+49 201 1112214', 'b.richter@fleetos.de',      false, 7.0,  8.0, NOW()),
-  ('eeeeb28e-861c-40ec-8f09-e1a36bd93f54', 'Dieter',    'Klein',       'DE-LIC-10015', '+49 421 1112215', 'd.klein@fleetos.de',        true,  3.5,  9.0, NOW()),
-  ('2d6be49c-0a14-41ca-8e93-99b94c0fa4c9', 'Renate',    'Wolf',        'DE-LIC-10016', '+49 911 1112216', 'r.wolf@fleetos.de',         true,  5.0,  8.0, NOW()),
-  ('0ab6aa67-85d6-4a2f-ac04-f6a300692272', 'Michael',   'Schäfer',     'DE-LIC-10017', '+49 711 1112217', 'm.schaefer@fleetos.de',     true,  1.0,  9.0, NOW()),
-  ('678b664f-a20e-46b1-9849-9e063d69d17d', 'Ingrid',    'König',       'DE-LIC-10018', '+49 89  1112218', 'i.koenig@fleetos.de',       false, 8.0,  8.0, NOW()),
-  ('07c28f0f-d9bb-4749-b037-241f8b2de8d4', 'Werner',    'Lange',       'DE-LIC-10019', '+49 30  1112219', 'w.lange@fleetos.de',        true,  4.0,  8.0, NOW()),
-  ('680edbb4-aa3c-40ed-bcec-45dc7db0be2d', 'Anneliese', 'Schwarz',     'DE-LIC-10020', '+49 221 1112220', 'a.schwarz@fleetos.de',      true,  0.5,  9.0, NOW());
+  ('0345AB6A-D8E5-46D5-BAB5-0C62694538CC', 'Klaus',     'Müller',      'DE-LIC-10001', '+49 30 11122201', 'k.mueller@flitos.de',      true,  2.5,  9.0, NOW()),
+  ('e88f746e-801a-4f1d-a21f-d35aebbdd0b6', 'Sabine',    'Schmidt',     'DE-LIC-10002', '+49 89 11122202', 's.schmidt@flitos.de',      true,  0.0,  8.0, NOW()),
+  ('dabe68fd-66dd-4835-9264-ae99bdecd1f5', 'Thomas',    'Becker',      'DE-LIC-10003', '+49 40 11122203', 't.becker@flitos.de',       false, 7.5,  8.0, NOW()),
+  ('f94fec69-9082-40f7-9c95-d6da9720a1f2', 'Petra',     'Hoffmann',    'DE-LIC-10004', '+49 221 1112204', 'p.hoffmann@flitos.de',     true,  1.0,  9.0, NOW()),
+  ('6400b736-8cb7-4a75-95df-c04e340e7f6d', 'Andreas',   'Wagner',      'DE-LIC-10005', '+49 711 1112205', 'a.wagner@flitos.de',       true,  3.0,  8.0, NOW()),
+  ('f72940fb-d332-427b-9eb1-e4c180e003f1', 'Monika',    'Fischer',     'DE-LIC-10006', '+49 351 1112206', 'm.fischer@flitos.de',      false, 8.0,  8.0, NOW()),
+  ('fe835d5a-f655-45d4-8631-72b06a5fa409', 'Stefan',    'Weber',       'DE-LIC-10007', '+49 511 1112207', 's.weber@flitos.de',        true,  4.5,  9.0, NOW()),
+  ('9984a9d2-f1d1-40ec-9668-97f8afe40480', 'Ursula',    'Meyer',       'DE-LIC-10008', '+49 341 1112208', 'u.meyer@flitos.de',        true,  0.0,  8.0, NOW()),
+  ('d7f29d51-5301-4c59-9192-7dca104ceb0d', 'Frank',     'Schulz',      'DE-LIC-10009', '+49 911 1112209', 'f.schulz@flitos.de',       true,  6.0,  9.0, NOW()),
+  ('574ae822-e42b-4328-8337-52301b8a7e76', 'Heike',     'Zimmermann',  'DE-LIC-10010', '+49 621 1112210', 'h.zimmermann@flitos.de',   false, 8.5,  8.0, NOW()),
+  ('f8a11da5-2cd4-441c-96b5-cfa69be50177', 'Jürgen',    'Braun',       'DE-LIC-10011', '+49 761 1112211', 'j.braun@flitos.de',        true,  1.5,  8.0, NOW()),
+  ('33200fbf-6b02-40a4-bec0-b0bb7b15ef32', 'Claudia',   'Krause',      'DE-LIC-10012', '+49 431 1112212', 'c.krause@flitos.de',       true,  2.0,  9.0, NOW()),
+  ('97c64bed-b39c-430f-a183-a72c480f91d7', 'Markus',    'Heinrich',    'DE-LIC-10013', '+49 631 1112213', 'm.heinrich@flitos.de',     true,  0.0,  8.0, NOW()),
+  ('38719778-8153-41d0-96a7-19b9d70b9b72', 'Birgit',    'Richter',     'DE-LIC-10014', '+49 201 1112214', 'b.richter@flitos.de',      false, 7.0,  8.0, NOW()),
+  ('eeeeb28e-861c-40ec-8f09-e1a36bd93f54', 'Dieter',    'Klein',       'DE-LIC-10015', '+49 421 1112215', 'd.klein@flitos.de',        true,  3.5,  9.0, NOW()),
+  ('2d6be49c-0a14-41ca-8e93-99b94c0fa4c9', 'Renate',    'Wolf',        'DE-LIC-10016', '+49 911 1112216', 'r.wolf@flitos.de',         true,  5.0,  8.0, NOW()),
+  ('0ab6aa67-85d6-4a2f-ac04-f6a300692272', 'Michael',   'Schäfer',     'DE-LIC-10017', '+49 711 1112217', 'm.schaefer@flitos.de',     true,  1.0,  9.0, NOW()),
+  ('678b664f-a20e-46b1-9849-9e063d69d17d', 'Ingrid',    'König',       'DE-LIC-10018', '+49 89  1112218', 'i.koenig@flitos.de',       false, 8.0,  8.0, NOW()),
+  ('07c28f0f-d9bb-4749-b037-241f8b2de8d4', 'Werner',    'Lange',       'DE-LIC-10019', '+49 30  1112219', 'w.lange@flitos.de',        true,  4.0,  8.0, NOW()),
+  ('680edbb4-aa3c-40ed-bcec-45dc7db0be2d', 'Anneliese', 'Schwarz',     'DE-LIC-10020', '+49 221 1112220', 'a.schwarz@flitos.de',      true,  0.5,  9.0, NOW());
 
 -- ── Vehicles ──────────────────────────────────────────────────
 -- lat/lon: major German cities and logistics hubs

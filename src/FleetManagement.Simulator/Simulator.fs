@@ -134,7 +134,7 @@ let run (opts: SimOptions) (cancelToken: CancellationToken) = async {
 
     printfn ""
     printfn "  ╔═══════════════════════════════════════════════════╗"
-    printfn "  ║  FleetOS Vehicle Simulator                        ║"
+    printfn "  ║  FlitOS Vehicle Simulator                        ║"
     printfn "  ║  %d vehicles  |  tick %dms  |  Ctrl+C to stop   ║" take opts.TickMs
     printfn "  ╚═══════════════════════════════════════════════════╝"
     printfn ""

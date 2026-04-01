@@ -1,12 +1,14 @@
 module FleetManagement.Actors.ClusterBootstrap
 
 open System
+open System.Diagnostics
 open Akka.Actor
 open Akka.Configuration
 open Akka.Cluster
 open Akka.FSharp
 open FleetManagement.Core.Events
 open ActorMessages
+open FleetManagement.Actors.Tracing
 
 // ============================================================
 //  HOCON Configuration builder
@@ -111,20 +113,22 @@ let start
 
     let cluster = Cluster.Get(system)
     cluster.RegisterOnMemberUp(fun () ->
+        match tryStartActivity "Cluster.MemberAdded" ActivityKind.Internal with
+        | Some activity ->
+            let ac = activity.AddTag("cluster.address", string cluster.SelfAddress)
+            ac.Dispose()
+        | None -> ()
         printfn "✅ Node joined cluster. Self address: %A" cluster.SelfAddress)
     cluster.RegisterOnMemberRemoved(fun () ->
+        match tryStartActivity "Cluster.MemberRemoved" ActivityKind.Internal with
+        | Some activity ->
+            let ac = activity.AddTag("cluster.address", string cluster.SelfAddress)
+            ac.Dispose()
+        | None -> ()
         printfn "⚠️  Node left cluster")
 
-    // Spawn actors bottom-up (dependencies first)
-    // let routeCalc =
-    //     system.ActorOf(
-    //         Props.Create RouteCalculatorActor.routeCalculatorActor,
-    //         "route-calculator")
-    //
-    // let telemetry =
-    //     system.ActorOf(Props.Create (TelemetryStreamActor.telemetryStreamActor broadcastTelemetry), "telemetry-stream")
 
-        // Use Akka.FSharp.spawn — NOT system.ActorOf(Props.props ...) — so that
+    // Use Akka.FSharp.spawn — NOT system.ActorOf(Props.props ...) — so that
     // FunActor<'Msg> is instantiated correctly without reflection on ActorBase.
     let routeCalc =
         spawn system "route-calculator"

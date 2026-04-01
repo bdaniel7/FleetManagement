@@ -1,4 +1,4 @@
-# ⬡ FleetOS — Fleet Management System
+# ⬡ FlitOS — Fleet Management System
 
 A **highly scalable, high-performance, highly reliable, and highly secure** fleet management platform built with **F# 10 / .NET 10**, **Akka.NET 1.5 (Streams, Remoting, Cluster)**, **PostgreSQL**, and **Svelte 5**.  
 Cloud-provider agnostic — runs anywhere Docker runs.

@@ -8,8 +8,8 @@ open Types
 // ── Help text ─────────────────────────────────────────────────
 
 let private printHelp () =
-    AnsiConsole.MarkupLine("[bold teal]FleetOS Vehicle Simulator[/]")
-    AnsiConsole.MarkupLine("[grey]Generates realistic vehicle telemetry and posts it to the FleetOS API.[/]")
+    AnsiConsole.MarkupLine("[bold teal]FlitOS Vehicle Simulator[/]")
+    AnsiConsole.MarkupLine("[grey]Generates realistic vehicle telemetry and posts it to the FlitOS API.[/]")
     printfn ""
     AnsiConsole.MarkupLine("[bold]USAGE:[/]")
     printfn "  FleetManagement.Simulator [OPTIONS]"
@@ -121,7 +121,7 @@ let private parseArgs (argv: string[]) =
 // ── Banner ────────────────────────────────────────────────────
 
 let private printBanner (opts: SimOptions) =
-    let rule = Rule("[bold teal]FleetOS Vehicle Simulator[/]")
+    let rule = Rule("[bold teal]FlitOS Vehicle Simulator[/]")
     rule.Justification <- Justify.Left
     AnsiConsole.Write(rule)
     printfn ""

@@ -12,6 +12,9 @@ x-api-env: &api-env
   Jwt__Issuer:      fleet-api
   Jwt__Audience:    fleet-client
   AllowedOrigins:   http://localhost,http://frontend
+  Seq__Url:         http://seq:5341
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://seq:5341
+  OTEL_SERVICE_NAME: FleetManagement.API
 
 services:
 
@@ -43,6 +46,27 @@ services:
         limits:
           memory: 1g
 
+  # ── Seq Log Server ────────────────────────────────────────────
+  seq:
+    image: datalust/seq:latest
+    container_name: fleet-seq
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: Y
+      SEQ_FREEBASED: "true"
+      SEQ_INGEST__OTLPENDPOINT: http://+:5341
+    ports:
+      - "5341:5341"
+      - "5342:5342"
+    volumes:
+      - seq-data:/data
+    networks:
+      - fleet-internal
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
   # ── Akka cluster node 1 (seed + primary) ────────────────────
   api-node1:
     build:
@@ -53,6 +77,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      seq:
+        condition: service_started
     environment:
       <<: *api-env
       Akka__Hostname:  api-node1
@@ -91,6 +117,8 @@ services:
         condition: service_healthy
       api-node1:
         condition: service_healthy
+      seq:
+        condition: service_started
     environment:
       <<: *api-env
       Akka__Hostname:  api-node2
@@ -159,6 +187,7 @@ networks:
 # ── Volumes ───────────────────────────────────────────────────
 volumes:
   postgres-data:
+  seq-data:
   api-logs-1:
   api-logs-2:
   api-snapshots-1:

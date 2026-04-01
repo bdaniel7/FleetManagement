@@ -33,7 +33,7 @@
   <nav class="sidebar">
     <div class="brand">
       <span class="brand-icon">⬡</span>
-      <span class="brand-text">FLEET<em>OS</em></span>
+      <span class="brand-text">FLiT<em>OS</em></span>
     </div>
 
     <div class="nav-items">

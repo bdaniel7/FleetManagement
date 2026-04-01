@@ -10,6 +10,36 @@
   let markers:      Record<string, any> = {};   // vehicle markers
   let tripLayers:   Record<string, any[]> = {}; // trip id → [polyline, wp markers]
 
+  // ── Search ─────────────────────────────────────────────────
+  let searchTerm = '';
+  let searchResults: Vehicle[] = [];
+  let showResults = false;
+
+  $: filteredVehicles = $vehicleList.filter(v =>
+    v.licensePlate.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  function focusVehicle(v: Vehicle) {
+    if (!map || !markers[v.id]) return;
+    map.flyTo([v.currentLocation.latitude, v.currentLocation.longitude], 14, {
+      duration: 0.8
+    });
+    markers[v.id].openPopup();
+    selectedVehicleId.set(v.id);
+    subscribeVehicle(v.id);
+    searchTerm = v.licensePlate;
+    showResults = false;
+  }
+
+  function onSearchInput() {
+    searchResults = filteredVehicles;
+    showResults = searchTerm.length > 0;
+  }
+
+  function closeResults() {
+    showResults = false;
+  }
+
   // ── Toggle layers ──────────────────────────────────────────
   let showTrips    = true;
   let showVehicles = true;
@@ -222,6 +252,30 @@
 <div class="map-page">
   <div class="map-header">
     <h1>Live Fleet Map</h1>
+    <div class="search-wrapper">
+      <input
+        type="search"
+        class="search-input"
+        placeholder="Search by license plate…"
+        bind:value={searchTerm}
+        on:input={onSearchInput}
+        on:focus={onSearchInput}
+        on:blur={() => setTimeout(closeResults, 150)}
+      />
+      {#if showResults && searchResults.length > 0}
+        <div class="search-results">
+          {#each searchResults as v}
+            <div class="search-item" on:mousedown={() => focusVehicle(v)}>
+              <span class="search-plate">{v.licensePlate}</span>
+              <span class="search-status" style="color:{statusColor[v.status] ?? '#888'}">● {v.status}</span>
+            </div>
+          {/each}
+        </div>
+      {/if}
+      {#if showResults && searchTerm.length > 0 && searchResults.length === 0}
+        <div class="search-results search-empty">No vehicles found</div>
+      {/if}
+    </div>
     <div class="controls">
       <label class="ctrl-toggle">
         <input type="checkbox" bind:checked={showVehicles} />
@@ -281,6 +335,47 @@
     box-shadow: var(--shadow-sm);
   }
   h1 { font-size: 17px; font-weight: 700; color: var(--text); flex: 1; }
+
+  .search-wrapper { position: relative; width: 260px; }
+  .search-input {
+    width: 100%; padding: 7px 12px;
+    font-size: 13px; font-family: Inter, sans-serif;
+    background: var(--bg-subtle); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px;
+    outline: none; transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .search-input:focus {
+    border-color: #0ea882;
+    box-shadow: 0 0 0 3px rgba(14, 168, 130, 0.15);
+  }
+  .search-input::placeholder { color: var(--text-faint); }
+  .search-input::-webkit-search-cancel-button,
+  .search-input::-ms-clear {
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+  }
+  .search-results {
+    position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+    background: var(--bg-panel); border: 1px solid var(--border);
+    border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    max-height: 200px; overflow-y: auto; z-index: 1000;
+  }
+  .search-item {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 12px; cursor: pointer; font-size: 13px;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+  .search-item:last-child { border-bottom: none; }
+  .search-item:hover { background: var(--bg-subtle); }
+  .search-plate { font-weight: 600; color: var(--text); }
+  .search-status { font-size: 11px; font-weight: 500; }
+  .search-empty {
+    padding: 10px 12px; font-size: 13px; color: var(--text-muted);
+    text-align: center;
+  }
 
   .controls { display: flex; gap: 12px; margin-right: auto; }
   .ctrl-toggle {

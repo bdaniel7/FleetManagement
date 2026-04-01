@@ -45,17 +45,19 @@ export async function loadAll() {
   loading.set(true);
   error.set(null);
   try {
-    // when any of these calls fail, no other data is displayed.
-    const [vs, rs, ts, fs] = await Promise.all([
+    // Load summary first so the dashboard appears quickly
+    const fs = await fleetApi.summary();
+    fleetSummary.set(fs);
+
+    // Then load the rest in parallel
+    const [vs, rs, ts] = await Promise.all([
       vehiclesApi.list(),
       routesApi.list(),
-      tripsApi.list(),
-      fleetApi.summary()
+      tripsApi.list()
     ]);
     vehicleList.set(vs);
     routeList.set(rs);
     tripList.set(ts);
-    fleetSummary.set(fs);
   } catch (e) {
     error.set((e as Error).message);
   } finally {

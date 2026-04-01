@@ -197,6 +197,14 @@
         border-color: var(--accent);
     }
 
+    .search-input::-webkit-search-cancel-button,
+    .search-input::-ms-clear {
+        appearance: none;
+        width: 16px;
+        height: 16px;
+        cursor: pointer;
+    }
+
     .loading {
         padding: 40px;
         color: var(--text-faint);

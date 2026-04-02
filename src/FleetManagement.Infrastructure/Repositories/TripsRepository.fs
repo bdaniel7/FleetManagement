@@ -1,4 +1,4 @@
-module FleetManagement.Infrastructure.Repositories.TripRepository
+module FleetManagement.Infrastructure.Repositories.TripsRepository
 
 open System
 open System.Text.Json

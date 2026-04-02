@@ -11,6 +11,8 @@ open FleetManagement.Actors.ActorMessages
 open FleetManagement.Actors.VehicleActor
 open FleetManagement.Actors.RouteCalculatorActor
 
+let private defaultLowFuelThreshold = 20.0
+
 // ============================================================
 //  Test fixtures
 // ============================================================
@@ -48,7 +50,7 @@ type VehicleActorTests() =
     member this.``GetVehicleState returns initial vehicle state`` () =
         let vehicle    = makeVehicle()
         let published  = ResizeArray<DomainEvent>()
-        let actorRef   = spawn this.Sys vehicle (published.Add)
+        let actorRef   = spawn this.Sys vehicle defaultLowFuelThreshold (published.Add) this.TestActor
 
         actorRef.Tell(GetVehicleState, this.TestActor)
         let snapshot = this.ExpectMsg<VehicleStateSnapshot>()
@@ -60,7 +62,7 @@ type VehicleActorTests() =
     member this.``UpdateLocation changes vehicle coordinates`` () =
         let vehicle  = makeVehicle()
         let pub      = ResizeArray<DomainEvent>()
-        let actor    = spawn this.Sys vehicle pub.Add
+        let actor    = spawn this.Sys vehicle defaultLowFuelThreshold pub.Add this.TestActor
         let newLoc   = { Latitude = 44.50; Longitude = 26.20 }
 
         actor.Tell(UpdateLocation(newLoc, 55.0), this.TestActor)
@@ -74,7 +76,7 @@ type VehicleActorTests() =
     member this.``ChangeStatus publishes domain event`` () =
         let vehicle = makeVehicle()
         let pub     = ResizeArray<DomainEvent>()
-        let actor   = spawn this.Sys vehicle pub.Add
+        let actor   = spawn this.Sys vehicle defaultLowFuelThreshold pub.Add this.TestActor
 
         actor.Tell(ChangeStatus VehicleStatus.EnRoute, this.TestActor)
         this.AwaitCondition(fun () -> pub.Count > 0) // , TimeSpan.FromSeconds 2.0
@@ -88,7 +90,7 @@ type VehicleActorTests() =
     member this.``ChangeStatus does not publish event for same status`` () =
         let vehicle = makeVehicle()
         let pub     = ResizeArray<DomainEvent>()
-        let actor   = spawn this.Sys vehicle pub.Add
+        let actor   = spawn this.Sys vehicle defaultLowFuelThreshold pub.Add this.TestActor
 
         actor.Tell(ChangeStatus VehicleStatus.Idle, this.TestActor)  // already Idle
         actor.Tell(GetVehicleState, this.TestActor)
@@ -103,7 +105,7 @@ type VehicleActorTests() =
     member this.``UpdateFuel clamps to 0-100 range`` () =
         let vehicle = makeVehicle()
         let pub     = ResizeArray<DomainEvent>()
-        let actor   = spawn this.Sys vehicle pub.Add
+        let actor   = spawn this.Sys vehicle defaultLowFuelThreshold pub.Add this.TestActor
 
         actor.Tell(UpdateFuel 150.0, this.TestActor)
         actor.Tell(GetVehicleState,  this.TestActor)
@@ -115,7 +117,7 @@ type VehicleActorTests() =
         let vehicle  = makeVehicle()
         let driverId = DriverId (Guid.NewGuid())
         let pub      = ResizeArray<DomainEvent>()
-        let actor    = spawn this.Sys vehicle pub.Add
+        let actor    = spawn this.Sys vehicle defaultLowFuelThreshold pub.Add this.TestActor
 
         actor.Tell(AssignDriver driverId, this.TestActor)
         actor.Tell(GetVehicleState,       this.TestActor)
@@ -126,7 +128,7 @@ type VehicleActorTests() =
     member this.``UnassignDriver clears driver`` () =
         let vehicle  = { makeVehicle() with AssignedDriver = Some (DriverId (Guid.NewGuid())) }
         let pub      = ResizeArray<DomainEvent>()
-        let actor    = spawn this.Sys vehicle pub.Add
+        let actor    = spawn this.Sys vehicle defaultLowFuelThreshold pub.Add this.TestActor
 
         actor.Tell(UnassignDriver,  this.TestActor)
         actor.Tell(GetVehicleState, this.TestActor)
@@ -138,7 +140,7 @@ type VehicleActorTests() =
         let vehicle = makeVehicle()
         let rid     = RouteId (Guid.NewGuid())
         let pub     = ResizeArray<DomainEvent>()
-        let actor   = spawn this.Sys vehicle pub.Add
+        let actor   = spawn this.Sys vehicle defaultLowFuelThreshold pub.Add this.TestActor
 
         actor.Tell(StartRoute rid,  this.TestActor)
         actor.Tell(GetVehicleState, this.TestActor)
@@ -151,7 +153,7 @@ type VehicleActorTests() =
         let vehicle = makeVehicle()
         let rid     = RouteId (Guid.NewGuid())
         let pub     = ResizeArray<DomainEvent>()
-        let actor   = spawn this.Sys vehicle pub.Add
+        let actor   = spawn this.Sys vehicle defaultLowFuelThreshold pub.Add this.TestActor
 
         actor.Tell(StartRoute rid,  this.TestActor)
         actor.Tell(CompleteRoute,   this.TestActor)
@@ -164,7 +166,7 @@ type VehicleActorTests() =
     member this.``UpdateTelemetry reflects new diagnostic codes`` () =
         let vehicle   = makeVehicle()
         let pub       = ResizeArray<DomainEvent>()
-        let actor     = spawn this.Sys vehicle pub.Add
+        let actor     = spawn this.Sys vehicle defaultLowFuelThreshold pub.Add this.TestActor
         let telemetry = {
             vehicle.Telemetry with DiagnosticCodes = ["P0300"; "P0420"]
         }

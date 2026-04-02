@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { vehicleList, selectedVehicleId, telemetryMap, tripList, subscribeVehicle } from '../stores/fleet';
+  import { vehicleList, selectedVehicleId, telemetryMap, tripList, subscribeVehicle, mapFocusVehicleId } from '../stores/fleet';
   import type { Vehicle, Trip } from '$lib/api';
 
   let mapEl: HTMLDivElement;
@@ -38,6 +38,15 @@
 
   function closeResults() {
     showResults = false;
+  }
+
+  // ── Focus from store (navigating from alerts) ──────────────
+  $: if ($mapFocusVehicleId && $vehicleList.length > 0) {
+    const vehicle = $vehicleList.find(v => v.id === $mapFocusVehicleId);
+    if (vehicle) {
+      focusVehicle(vehicle);
+    }
+    mapFocusVehicleId.set(null); // Clear after use
   }
 
   // ── Toggle layers ──────────────────────────────────────────

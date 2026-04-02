@@ -1,8 +1,8 @@
 // src/stores/fleet.ts — reactive state management
-import { writable, derived } from 'svelte/store';
+import { writable, derived, get } from 'svelte/store';
 import type { HubConnection } from '@microsoft/signalr';
-import type { Vehicle, Route, FleetSummary, TelemetryEvent, Trip } from '$lib/api';
-import { vehicles as vehiclesApi, routes as routesApi, fleet as fleetApi, trips as tripsApi, createHubConnection } from '$lib/api';
+import type { Vehicle, Route, FleetSummary, TelemetryEvent, Trip, AlertRecord } from '$lib/api';
+import { vehicles as vehiclesApi, routes as routesApi, fleet as fleetApi, trips as tripsApi, alertsApi, createHubConnection } from '$lib/api';
 
 // ── Raw stores ────────────────────────────────────────────────
 
@@ -11,14 +11,43 @@ export const routeList     = writable<Route[]>([]);
 export const tripList      = writable<Trip[]>([]);
 export const fleetSummary  = writable<FleetSummary | null>(null);
 export const telemetryMap  = writable<Record<string, TelemetryEvent>>({});
-export const alerts        = writable<{ message: string; priority: string; timestamp: string; id: string }[]>([]);
+export const alerts        = writable<{ message: string; priority: string; timestamp: string; id: string; vehicleId?: string }[]>([]);
 export const hubStatus     = writable<'connecting' | 'connected' | 'reconnecting' | 'disconnected'>('disconnected');
 export const loading        = writable(false);
 export const error          = writable<string | null>(null);
 
+// ── Load alerts from API ────────────────────────────────────
+
+export async function loadAlerts() {
+  try {
+    const dbAlerts = await alertsApi.list();
+    const signalRAlerts = get(alerts);
+    // Merge DB alerts with SignalR alerts, avoiding duplicates by id
+    const existingIds = new Set(signalRAlerts.map(a => a.id));
+    const newAlerts = dbAlerts
+      .filter(a => !existingIds.has(a.id))
+      .map(a => ({
+        id: a.id,
+        message: a.message,
+        priority: 'Normal', // Historical alerts don't have priority in DB
+        timestamp: a.issuedAt,
+        vehicleId: a.vehicleId ?? undefined
+      }));
+    if (newAlerts.length > 0) {
+      alerts.update(as => [...newAlerts, ...as]);
+    }
+  } catch (e) {
+    console.error('Failed to load alerts from API:', e);
+  }
+}
+
 // ── Selected vehicle ──────────────────────────────────────────
 
 export const selectedVehicleId = writable<string | null>(null);
+
+// ── Map focus vehicle (for navigating from alerts) ────────────
+
+export const mapFocusVehicleId = writable<string | null>(null);
 
 export const selectedVehicle = derived(
   [vehicleList, selectedVehicleId],
@@ -100,7 +129,7 @@ export async function connectHub() {
     ));
   });
 
-  hub.on('OnAlert', (alert: { message: string; priority: string; timestamp: string }) => {
+  hub.on('OnAlert', (alert: { message: string; priority: string; timestamp: string; vehicleId?: string }) => {
     alerts.update(as => [{ ...alert, id: crypto.randomUUID() }, ...as.slice(0, 49)]);
   });
 

@@ -50,3 +50,7 @@ type ITripsRepository =
     abstract Upsert        : Trip -> Async<unit>
     abstract UpdateStatus  : TripId * TripStatus -> Async<unit>
     abstract Delete        : TripId -> Async<bool>
+
+type IAlertsRepository =
+    abstract Insert : AlertRecord -> Async<unit>
+    abstract GetAll : unit -> Async<AlertRecord list>

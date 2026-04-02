@@ -213,6 +213,21 @@ export const trips = {
   delete:   (id: string) => del(`/trips/${id}`)
 };
 
+// ── Alert types ────────────────────────────────────────────────
+
+export interface AlertRecord {
+  id: string;
+  vehicleId: string | null;
+  message: string;
+  issuedAt: string;
+}
+
+// ── Alerts API ─────────────────────────────────────────────────
+
+export const alertsApi = {
+  list: () => get<AlertRecord[]>('/alerts')
+};
+
 // ── SignalR Hub ───────────────────────────────────────────────
 
 export type HubEventMap = {

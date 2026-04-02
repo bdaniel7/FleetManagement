@@ -157,6 +157,19 @@ let migrations = [
             CREATE INDEX IF NOT EXISTS idx_trips_status     ON public.fms_trips(status);
             CREATE INDEX IF NOT EXISTS idx_trips_created_at ON public.fms_trips(created_at DESC);"""
     }
+    {
+        Version = 8
+        Name    = "create_alerts"
+        UpSql   = """
+            CREATE TABLE IF NOT EXISTS public.fms_alerts (
+                id          UUID        PRIMARY KEY,
+                vehicle_id  UUID       REFERENCES public.fms_vehicles(id) ON DELETE SET NULL,
+                message     TEXT        NOT NULL,
+                issued_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+            );
+            CREATE INDEX IF NOT EXISTS idx_alerts_vehicle_id ON public.fms_alerts(vehicle_id);
+            CREATE INDEX IF NOT EXISTS idx_alerts_issued_at  ON public.fms_alerts(issued_at DESC);"""
+    }
 ]
 
 // ============================================================

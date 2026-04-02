@@ -170,6 +170,8 @@ let mapVehicleEndpoints (app: IEndpointRouteBuilder) (repo: IVehicleRepository) 
     app.MapPost("/api/vehicles/{id:guid}/telemetry", Func<Guid, {| speedKmh: float; fuelPct: float; engineTemp: float; odometerKm: float; diagCodes: string list |}, Task<IResult>> (fun (id) (ev) -> task {
         try
             do! repo.UpdateFuel(VehicleId id, ev.fuelPct)
+            // Also send to VehicleActor to trigger fuel alert checks
+            fleetSupervisor.Tell(UpdateVehicleFuel(VehicleId id, ev.fuelPct))
             return Results.Accepted()
         with ex ->
             return Results.Problem($"Failed to update telemetry: {ex.Message}")

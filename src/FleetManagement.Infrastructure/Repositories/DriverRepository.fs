@@ -1,7 +1,6 @@
 module FleetManagement.Infrastructure.Repositories.DriverRepository
 
 open System
-open System.Data
 open FleetManagement.Core.Domain
 open FleetManagement.Infrastructure.DbContext
 open FleetManagement.Infrastructure.IRepositories

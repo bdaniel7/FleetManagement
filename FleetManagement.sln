@@ -7,7 +7,7 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FleetManagement.Core", "src
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FleetManagement.Actors", "src\FleetManagement.Actors\FleetManagement.Actors.fsproj", "{11111111-1111-1111-1111-111111111104}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FleetManagement.Api", "src\FleetManagement.Api\FleetManagement.Api.fsproj", "{11111111-1111-1111-1111-111111111105}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FleetManagement.API", "src\FleetManagement.API\FleetManagement.API.fsproj", "{11111111-1111-1111-1111-111111111105}"
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FleetManagement.Infrastructure", "src\FleetManagement.Infrastructure\FleetManagement.Infrastructure.fsproj", "{AD09058D-91BF-46B8-8AD3-A8A80856FC2D}"
 EndProject

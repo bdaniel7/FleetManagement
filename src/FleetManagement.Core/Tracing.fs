@@ -3,15 +3,15 @@ module FleetManagement.Core.Tracing
 open System
 open System.Diagnostics
 
-let getTraceId (activity: Activity option) =
+let getTraceId (activity: Activity option) : string option =
     match activity with
-    | Some a -> a.TraceId.ToString()
-    | None -> null
+    | Some a -> Some (a.TraceId.ToString())
+    | None -> None
 
-let getSpanId (activity: Activity option) =
+let getSpanId (activity: Activity option) : string option =
     match activity with
-    | Some a -> a.SpanId.ToString()
-    | None -> null
+    | Some a -> Some (a.SpanId.ToString())
+    | None -> None
 
 let dispose (activity: Activity option) : unit =
     match activity with

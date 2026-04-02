@@ -60,13 +60,22 @@ module private VehicleActorState =
 //  Actor Definition  (Akka.FSharp functional style)
 // ============================================================
 
+let private isElectricVehicle (v: Vehicle) =
+    match v.VehicleType with
+    | VehicleType.ElectricTruck -> true
+    | VehicleType.ElectricVan -> true
+    | _ -> false
+
 let vehicleActor
     (initialVehicle : Vehicle)
+    (lowFuelThreshold : float)
     (publishEvent   : DomainEvent -> unit)
+    (supervisor     : IActorRef)
     (mailbox        : Actor<VehicleMessage>) =
 
     let correlationId = Guid.NewGuid()
     let log           = mailbox.Context.GetLogger()
+    let isElectric    = isElectricVehicle initialVehicle
 
     // Extract inner strings from [<Struct>] DUs — never pass them directly
     // to the logger or string interpolation; .NET 10 crashes on reflection.
@@ -106,12 +115,26 @@ let vehicleActor
             let ev   = vehicleFuelUpdated correlationId state.Vehicle.Id pct
             publishEvent ev
             let next = state |> VehicleActorState.applyFuel pct |> VehicleActorState.addEvent ev
-            // Low fuel warning
-            if pct < 15.0 then
-                log.Warning("Vehicle {VehicleId} fuel low: {Pct}%%", vidStr state.Vehicle.Id, pct)
-                mailbox.Context.Parent.Tell(RaiseFleetAlert(
-                    $"Low fuel: {state.Vehicle.LicensePlate} at {pct:F1}%%",
-                    Priority.High, Some state.Vehicle.Id))
+            // Low battery warning (with rate limiting - only alert once until recharged)
+            // For electric vehicles, use battery level; for others, use fuel level
+            let currentLevel = if isElectric then state.Vehicle.Telemetry.BatteryLevel else Some pct
+            let prevLevel = if isElectric then state.Vehicle.Telemetry.BatteryLevel else Some state.Vehicle.FuelLevelPct
+            match currentLevel with
+            | Some level when level < lowFuelThreshold ->
+                // Critical if level is 0, otherwise warning
+                let priority = if level <= 0.0 then Priority.Emergency else Priority.High
+                let alertType = if isElectric then "battery" else "fuel"
+                // Only send alert if level was previously above threshold (debounce)
+                match prevLevel with
+                | Some prev when prev >= lowFuelThreshold ->
+                    log.Warning("Vehicle {VehicleId} {Type} LOW: {Pct}%% (threshold: {Threshold}%%)",
+                                vidStr state.Vehicle.Id, alertType, level, lowFuelThreshold)
+                    let levelStr = sprintf "%.1f" level
+                    supervisor.Tell(RaiseFleetAlert(
+                        sprintf "Low %s for %s at level %s%%" alertType state.Vehicle.LicensePlate levelStr,
+                        priority, Some state.Vehicle.Id))
+                | _ -> ()
+            | _ -> ()
             return! loop next
 
         | AssignDriver driverId ->
@@ -164,9 +187,9 @@ let vehicleActor
 //  Actor factory
 // ============================================================
 
-let spawn (system: ActorSystem) (vehicle: Vehicle) (publishEvent: DomainEvent -> unit) : IActorRef =
+let spawn (system: ActorSystem) (vehicle: Vehicle) (lowFuelThreshold: float) (publishEvent: DomainEvent -> unit) (supervisor: IActorRef) : IActorRef =
     let (VehicleId vid) = vehicle.Id
     let name = $"vehicle-{vid:N}"
     spawnOpt system name
-        (vehicleActor vehicle publishEvent)
+        (vehicleActor vehicle lowFuelThreshold publishEvent supervisor)
         [ SpawnOption.SupervisorStrategy (Strategy.OneForOne (fun _ -> Directive.Restart)) ]

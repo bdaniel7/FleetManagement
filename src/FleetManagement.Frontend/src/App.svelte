@@ -3,6 +3,7 @@
   import Router, { link, location } from 'svelte-spa-router';
   import { loadAll, connectHub, disconnectHub, hubStatus, fleetSummary, alerts, error } from './stores/fleet';
   import routes, { navItems } from '$lib/routes';
+  import ToastNotifications from './components/ToastNotifications.svelte';
 
   let mobileMenuOpen = false;
 
@@ -102,6 +103,8 @@
     <Router {routes} />
   </main>
 </div>
+
+<ToastNotifications />
 
 <style>
   :global(*) { box-sizing: border-box; margin: 0; padding: 0; }

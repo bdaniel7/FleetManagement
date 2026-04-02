@@ -6,7 +6,7 @@ open System.Text.Json.Serialization
 open FleetManagement.API.Endpoints.TripEndpoints
 open FleetManagement.Core.Domain
 open FleetManagement.Infrastructure.IRepositories
-open FleetManagement.Infrastructure.Repositories.TripRepository
+open FleetManagement.Infrastructure.Repositories.TripsRepository
 open Microsoft.AspNetCore.Builder
 open Microsoft.AspNetCore.Http.Json
 open Microsoft.Extensions.DependencyInjection
@@ -22,18 +22,22 @@ open Serilog.Events
 open FleetManagement.Core.Events
 open FleetManagement.Actors.ActorMessages
 open FleetManagement.Actors.ClusterBootstrap
+open Akka.FSharp
 open FleetManagement.Infrastructure.DbContext
 open FleetManagement.Infrastructure.Migrations
 open FleetManagement.Infrastructure.Repositories.VehicleRepository
 open FleetManagement.Infrastructure.Repositories.DriverRepository
 open FleetManagement.Infrastructure.Repositories.RouteRepository
 open FleetManagement.Infrastructure.Repositories.EventRepository
+open FleetManagement.Infrastructure.Repositories.AlertsRepository
 open FleetManagement.API.Middleware.RateLimitMiddleware
 open FleetManagement.API.Hubs.TelemetryHub
 open FleetManagement.API.Endpoints.VehicleEndpoints
 open FleetManagement.API.Endpoints.RouteEndpoints
 open FleetManagement.API.Endpoints.FleetEndpoints
+open FleetManagement.API.Endpoints.AlertsEndpoints
 open FleetManagement.API.Tracing
+open FleetManagement.API.AlertPublishers
 open OpenTelemetry.Trace
 open System.Diagnostics
 
@@ -70,7 +74,7 @@ let configureOpenTelemetry (services: IServiceCollection) (seqUrl: string) =
                     opts.RecordException <- true
                     opts.Filter <- fun ctx -> not (ctx.Request.Path.StartsWithSegments("/health")))
                  .AddHttpClientInstrumentation()
-                 .AddSource(Tracing.serviceName)
+                 .AddSource(serviceName)
                  .AddSource(FleetManagement.Actors.Tracing.serviceName)
                  .AddSource(FleetManagement.Infrastructure.Tracing.serviceName)
                  //.AddConsoleExporter()
@@ -79,7 +83,7 @@ let configureOpenTelemetry (services: IServiceCollection) (seqUrl: string) =
                     o.Protocol <- OtlpExportProtocol.HttpProtobuf)
              |> ignore)
             .WithMetrics(fun t ->
-                    t.AddMeter(Tracing.serviceName) |> ignore
+                    t.AddMeter(serviceName) |> ignore
                     t.AddMeter(FleetManagement.Infrastructure.Tracing.serviceName)
                      .AddNpgsqlInstrumentation |> ignore)
         |> ignore
@@ -123,6 +127,7 @@ let main args =
         services.AddScoped<IRouteRepository,   PostgresRouteRepository>()   |> ignore
         services.AddScoped<IEventRepository,   PostgresEventRepository>()   |> ignore
         services.AddScoped<ITripsRepository,   PostgresTripsRepository>()   |> ignore
+        services.AddScoped<IAlertsRepository, PostgresAlertsRepository>() |> ignore
 
         services.Configure<JsonOptions> (fun (opts: JsonOptions) ->
             opts.SerializerOptions.Converters.Add(VehicleStatusConverter())) |> ignore
@@ -155,6 +160,10 @@ let main args =
             opts.EnableDetailedErrors      <- builder.Environment.IsDevelopment()
             opts.MaximumReceiveMessageSize <- 64L * 1024L) |> ignore
         services.AddSingleton<IFleetHubBroadcaster, FleetHubBroadcaster>() |> ignore
+
+        // Alert Publishers
+        services.AddSingleton<IAlertPublisher, RabbitMqAlertPublisher>() |> ignore
+        services.AddSingleton<IAlertPublisher, SignalRAlertPublisher>() |> ignore
 
         // Rate limiting
         configure services |> ignore
@@ -201,13 +210,37 @@ let main args =
         // Akka.NET Actor System (singleton lifetime)
         services.AddSingleton<FleetActorSystem>(fun sp ->
             let broadcaster   = sp.GetRequiredService<IFleetHubBroadcaster>()
-            let eventRepo     = sp.GetRequiredService<IEventRepository>()
-            let seedNodes     = akkaSeedNodes.Split(',') |> Array.map (fun s -> s.Trim()) |> Array.toList
+            let alertPublishers = sp.GetServices<IAlertPublisher>() |> Seq.toList
+            let alertsRepo    = sp.GetRequiredService<IAlertsRepository>()
+            let eventRepo   = sp.GetRequiredService<IEventRepository>()
+            let seedNodes    = akkaSeedNodes.Split(',') |> Array.map (fun s -> s.Trim()) |> Array.toList
+            let lowFuelThreshold = cfg.["Alerts:LowFuelThreshold"]
+                                   |> Option.ofObj
+                                   |> Option.map float
+                                   |> Option.defaultValue 20.0
             let publishEvent  = fun (ev: DomainEvent) ->
                 eventRepo.Append ev |> Async.Start
             let broadcastTelemetry = fun (ev: TelemetryEvent) ->
                 broadcaster.BroadcastTelemetry ev |> ignore
-            start akkaHost akkaPort seedNodes publishEvent broadcastTelemetry) |> ignore
+            let publishAlert = fun (alert: FleetAlert) ->
+                let alertInfo: AlertInfo = {
+                    AlertId   = alert.AlertId
+                    Message   = alert.Message
+                    Priority  = alert.Priority
+                    VehicleId = alert.VehicleId |> Option.map (fun (VehicleId v) -> v)
+                    RaisedAt  = alert.RaisedAt
+                }
+                // Persist to database
+                let record = {
+                    Id        = AlertId alert.AlertId
+                    VehicleId = alert.VehicleId
+                    Message   = alert.Message
+                    IssuedAt  = alert.RaisedAt
+                }
+                alertsRepo.Insert(record) |> Async.Start
+                // Notify publishers (SignalR, RabbitMQ, etc.)
+                alertPublishers |> List.iter (fun pub -> pub.PublishAlert(alertInfo) |> ignore)
+            start akkaHost akkaPort seedNodes publishEvent broadcastTelemetry publishAlert lowFuelThreshold) |> ignore
 
         // ── Build app ─────────────────────────────────────────────
         let app = builder.Build()
@@ -235,11 +268,22 @@ let main args =
         let vehicleRepo = app.Services.GetRequiredService<IVehicleRepository>()
         let routeRepo   = app.Services.GetRequiredService<IRouteRepository>()
         let tripsRepo = app.Services.GetRequiredService<ITripsRepository>()
+        let alertsRepo = app.Services.GetRequiredService<IAlertsRepository>()
+
+        // Register all vehicles from database with FleetSupervisor
+        let supervisor = actorSystem.FleetSupervisor
+        Async.StartImmediate(async {
+            let! vehicles = vehicleRepo.GetAll()
+            Log.Information("Registering {Count} vehicles with FleetSupervisor", vehicles.Length)
+            for v in vehicles do
+                supervisor <! FleetSupervisorMessage.RegisterVehicle v
+        })
 
         mapVehicleEndpoints app vehicleRepo actorSystem.FleetSupervisor
         mapRouteEndpoints   app routeRepo   actorSystem.RouteCalculator
         mapFleetEndpoints   app actorSystem.FleetSupervisor actorSystem.RouteCalculator vehicleRepo routeRepo
         mapTripsEndpoints app tripsRepo
+        mapAlertsEndpoints app alertsRepo
 
         // Graceful shutdown
         let lifetime = app.Services.GetRequiredService<IHostApplicationLifetime>()

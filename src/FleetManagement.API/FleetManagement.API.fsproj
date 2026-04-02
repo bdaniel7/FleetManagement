@@ -12,11 +12,13 @@
     <Compile Include="Middleware/SecurityMiddleware.fs" />
     <Compile Include="Middleware/RateLimitMiddleware.fs" />
     <Compile Include="Hubs/TelemetryHub.fs" />
+    <Compile Include="AlertPublishers.fs" />
     <Compile Include="Endpoints\Dtos.fs" />
     <Compile Include="Endpoints/VehicleEndpoints.fs" />
     <Compile Include="Endpoints/RouteEndpoints.fs" />
     <Compile Include="Endpoints/FleetEndpoints.fs" />
     <Compile Include="Endpoints\TripsEndpoints.fs" />
+    <Compile Include="Endpoints\AlertsEndpoints.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
@@ -41,6 +43,7 @@
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.15.1" />
     <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.15.1" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.7" />
+    <PackageReference Include="RabbitMQ.Client" Version="6.8.1" />
     <PackageReference Update="FSharp.Core" Version="10.1.201" />
   </ItemGroup>
 </Project>

@@ -1,5 +1,8 @@
 <script lang="ts">
-  import { alerts } from '../stores/fleet';
+  import { onMount } from 'svelte';
+  import { alerts, mapFocusVehicleId, loadAlerts } from '../stores/fleet';
+  import { push } from 'svelte-spa-router';
+  import {type AlertMessage, splitMessage} from "$lib/common.ts";
 
   const priorityColor: Record<string, string> = {
     Emergency: '#dc2626', High: '#d97706', Normal: '#2563eb', Low: '#7a92a8',
@@ -13,6 +16,18 @@
 
   function clearAll() { alerts.set([]); }
   function dismiss(id: string) { alerts.update(as => as.filter(a => a.id !== id)); }
+
+  function focusVehicle(vehicleId: string | undefined) {
+    if (vehicleId) {
+      mapFocusVehicleId.set(vehicleId);
+      push('/live-map');
+    }
+  }
+
+  onMount(() => {
+    loadAlerts();
+  });
+
 </script>
 
 <div class="alerts-page">
@@ -34,7 +49,18 @@
           <span class="priority-bar" style="background:{priorityColor[alert.priority]}"></span>
           <div class="alert-body">
             <div class="alert-priority" style="color:{priorityColor[alert.priority]}">{alert.priority}</div>
-            <div class="alert-message">{alert.message}</div>
+            <div class="alert-message">
+              {#if alert.vehicleId}
+                {@const alerts = splitMessage(alert.message)}
+                {alerts.start}
+                <button class="plate-link" on:click={() => focusVehicle(alert.vehicleId)}>
+                  {alerts.licensePlate}
+                </button>
+                {alerts.end}
+              {:else}
+                {alert.message}
+              {/if}
+            </div>
             <div class="alert-time">{new Date(alert.timestamp).toLocaleString()}</div>
           </div>
         </div>
@@ -88,6 +114,12 @@
   .alert-priority { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
   .alert-message  { font-size: 13px; color: var(--text); font-weight: 500; line-height: 1.4; }
   .alert-time     { font-size: 11px; color: var(--text-faint); font-family: 'DM Mono', monospace; }
+
+  .plate-link {
+    background: none; border: none; padding: 0; font: inherit;
+    color: var(--accent, #2563eb); cursor: pointer; text-decoration: underline; font-weight: 600;
+  }
+  .plate-link:hover { color: #1d4ed8; }
 
   .dismiss-btn {
     background: transparent; border: none; color: var(--text-faint);

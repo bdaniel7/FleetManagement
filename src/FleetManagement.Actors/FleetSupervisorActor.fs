@@ -19,6 +19,8 @@ type private SupervisorState = {
     AlertCount    : int
 }
 
+type AlertPublisher = FleetAlert -> unit
+
 // ============================================================
 //  Fleet Supervisor
 // ============================================================
@@ -27,6 +29,8 @@ let fleetSupervisorActor
     (routeCalculator  : IActorRef)
     (telemetryActor   : IActorRef)
     (publishEvent     : DomainEvent -> unit)
+    (publishAlert     : AlertPublisher)
+    (lowFuelThreshold : float)
     (mailbox          : Actor<FleetSupervisorMessage>) =
 
     let log = mailbox.Context.GetLogger()
@@ -53,7 +57,7 @@ let fleetSupervisorActor
                 return! loop state
             else
                 let actorRef =
-                    VehicleActor.spawn mailbox.Context.System vehicle publishEvent
+                    VehicleActor.spawn mailbox.Context.System vehicle lowFuelThreshold publishEvent mailbox.Self
                 state.VehicleActors.[vehicle.Id] <- actorRef
                 let (VehicleId vid) = vehicle.Id
                 log.Info("Vehicle {Plate} ({Id}) registered", vehicle.LicensePlate, string vid)
@@ -132,6 +136,7 @@ let fleetSupervisorActor
                 state.Alerts.RemoveAt 0
             let ev = fleetAlert (Guid.NewGuid()) message priority vehicleId
             publishEvent ev
+            publishAlert alert
             log.Warning("Fleet alert [{Priority}]: {Message}", priority, message)
             return! loop { state with AlertCount = state.AlertCount + 1 }
 
@@ -140,6 +145,15 @@ let fleetSupervisorActor
             log.Debug("Fleet health check: {Count} vehicles tracked", state.VehicleActors.Count)
             // Ping all actors; crashed ones trigger supervision restart
             state.VehicleActors.Values |> Seq.iter (fun ref -> ref.Tell(GetVehicleState))
+            return! loop state
+
+        // -------------------------------------------------------
+        | UpdateVehicleFuel (vehicleId, fuelPct) ->
+            match state.VehicleActors.TryGetValue vehicleId with
+            | true, ref ->
+                ref.Tell(UpdateFuel fuelPct)
+            | _ ->
+                log.Warning("UpdateVehicleFuel: Vehicle {Id} not found", vehicleId)
             return! loop state
     }
 
@@ -165,10 +179,8 @@ let spawn
     (system         : ActorSystem)
     (routeCalculator: IActorRef)
     (telemetryActor : IActorRef)
-    (publishEvent   : DomainEvent -> unit) : IActorRef =
+    (publishEvent   : DomainEvent -> unit)
+    (publishAlert   : AlertPublisher)
+    (lowFuelThreshold : float) : IActorRef =
     spawn system "fleet-supervisor"
-        (fleetSupervisorActor routeCalculator telemetryActor publishEvent)
-
-    // system.ActorOf(
-    //     Props.Create(fleetSupervisorActor routeCalculator telemetryActor publishEvent),
-    //     "fleet-supervisor")
+        (fleetSupervisorActor routeCalculator telemetryActor publishEvent publishAlert lowFuelThreshold)

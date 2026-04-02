@@ -95,6 +95,7 @@ type FleetSupervisorMessage =
     | BroadcastToFleet      of VehicleMessage
     | RaiseFleetAlert       of string * Priority * VehicleId option
     | ScheduleHealthCheck
+    | UpdateVehicleFuel     of VehicleId * float
 
 type FleetAlert = {
     AlertId    : Guid

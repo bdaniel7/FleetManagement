@@ -67,6 +67,44 @@ services:
         limits:
           memory: 512m
 
+  # ── RabbitMQ Message Broker ────────────────────────────────────
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: fleet-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"   # AMQP
+      - "15672:15672" # Management UI
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - fleet-internal
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+
+  # ── Mosquitto MQTT Broker ─────────────────────────────────────
+  mqtt:
+    image: eclipse-mosquitto:2
+    container_name: fleet-mqtt
+    restart: unless-stopped
+    ports:
+      - "1883:1883"  # MQTT
+      - "9001:9001"  # WebSocket (optional)
+    volumes:
+      - mqtt-data:/mosquitto/data
+      - mqtt-logs:/mosquitto/log
+    networks:
+      - fleet-internal
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+
   # ── Akka cluster node 1 (seed + primary) ────────────────────
   api-node1:
     build:
@@ -188,6 +226,9 @@ networks:
 volumes:
   postgres-data:
   seq-data:
+  rabbitmq-data:
+  mqtt-data:
+  mqtt-logs:
   api-logs-1:
   api-logs-2:
   api-snapshots-1:

@@ -106,7 +106,9 @@ let start
     (port           : int)
     (seedNodes      : string list)
     (broadcastEvent : DomainEvent -> unit)
-    (broadcastTelemetry : TelemetryEvent -> unit) : FleetActorSystem =
+    (broadcastTelemetry : TelemetryEvent -> unit)
+    (publishAlert   : FleetSupervisorActor.AlertPublisher)
+    (lowFuelThreshold : float) : FleetActorSystem =
 
     let config = buildConfig hostname port seedNodes
     let system = ActorSystem.Create("fleet-cluster", config)
@@ -141,7 +143,7 @@ let start
     telemetry.Tell StartStream
 
     let supervisor =
-        FleetSupervisorActor.spawn system routeCalc telemetry broadcastEvent
+        FleetSupervisorActor.spawn system routeCalc telemetry broadcastEvent publishAlert lowFuelThreshold
 
     {
         System          = system

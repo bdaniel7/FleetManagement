@@ -15,6 +15,7 @@
     <Compile Include="Repositories/RouteRepository.fs" />
     <Compile Include="Repositories/EventRepository.fs" />
     <Compile Include="Repositories\TripsRepository.fs" />
+    <Compile Include="Repositories\AlertsRepository.fs" />
     <Compile Include="Migrations/Schema.fs" />
   </ItemGroup>
   <ItemGroup>

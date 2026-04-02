@@ -21,6 +21,9 @@ type DriverId = DriverId of Guid
 type NodeId = NodeId of string   // Road/Waypoint identifier
 
 [<Struct>]
+type AlertId = AlertId of Guid
+
+[<Struct>]
 type GeoCoordinate = {
     Latitude  : float
     Longitude : float
@@ -222,6 +225,13 @@ type Trip = {
     CompletedAt : DateTimeOffset option
 }
 
+type AlertRecord = {
+    Id        : AlertId
+    VehicleId : VehicleId option
+    Message   : string
+    IssuedAt  : DateTimeOffset
+}
+
 type PathfindingAlgorithm =
     | AStar
     | Dijkstra
@@ -244,7 +254,6 @@ and AlgorithmConverter() =
             | BellmanFord  -> "BellmanFord"
 
         writer.WriteStringValue(str)
-
 
 // ============================================================
 //  Aggregates

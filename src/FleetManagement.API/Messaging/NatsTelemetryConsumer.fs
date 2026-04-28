@@ -39,6 +39,7 @@ type NatsOptions = {
     StreamName:     string
     ConsumerName:   string
     Subject:        string
+    /// Default = 500
     BatchSize:      int
     PollIntervalMs: int
 }
@@ -107,6 +108,46 @@ type NatsTelemetryConsumer(
 
     // ── Process one batch of messages ──────────────────────────
 
+    let persistTelemetryToDb (msgs: ResizeArray<TelemetryMessage>) = task {
+            do! db.InTransaction(fun conn tx -> async {
+                for t in msgs do
+                    let! _ =
+                        Db.execute
+                            """INSERT INTO public.fms_telemetry_archive
+                               (vehicle_id, recorded_at, lat, lon, speed_kmh, fuel_pct, engine_temp, odometer_km)
+                               VALUES (@vid, @ts, @lat, @lon, @speed, @fuel, @temp, @odo)"""
+                            {| vid   = Guid.Parse(t.VehicleId)
+                               ts    = t.Timestamp
+                               lat   = t.Lat
+                               lon   = t.Lon
+                               speed = t.SpeedKmh
+                               fuel  = t.FuelPct
+                               temp  = t.EngineTemp
+                               odo   = t.OdometerKm |} conn tx
+                    ()
+                return ()
+            })
+    }
+
+    let broadcastToSignalR (msgs: ResizeArray<TelemetryMessage>) =
+        let perVehicle =
+            msgs
+            |> Seq.groupBy (fun t -> t.VehicleId)
+            |> Seq.map (fun (vid, readings) -> readings |> Seq.maxBy (fun r -> r.Timestamp))
+
+        for t in perVehicle do
+            let loc = {Latitude = t.Lat; Longitude = t.Lon}
+            broadcaster.BroadcastTelemetry {
+                VehicleId  = VehicleId (Guid.Parse(t.VehicleId))
+                Location   = loc
+                DiagCodes  = []
+                SpeedKmh   = t.SpeedKmh
+                FuelPct    = t.FuelPct
+                EngineTemp = t.EngineTemp
+                OdometerKm = t.OdometerKm
+                Timestamp  = t.Timestamp
+            } |> ignore
+
     let processBatch (consumer: INatsJSConsumer) = task {
         let msgs = ResizeArray<TelemetryMessage>()
 
@@ -126,7 +167,7 @@ type NatsTelemetryConsumer(
                         msgs.Add(telemetry)
                     do! msg.AckAsync().AsTask()
                 with ex ->
-                    logger.LogWarning(ex, "Failed to deserialise telemetry message — NAK'd")
+                    logger.LogWarning(ex, "Failed to deserialize telemetry message — NAK'd")
                     do! msg.NakAsync().AsTask()
             else
                 hasMore <- false
@@ -134,44 +175,10 @@ type NatsTelemetryConsumer(
         if msgs.Count > 0 then
             logger.LogDebug("Processing batch of {Count} telemetry messages", msgs.Count)
 
-            // Bulk insert into telemetry_archive
-            do! db.InTransaction(fun conn tx -> async {
-                for t in msgs do
-                    let! _ =
-                        Db.execute
-                            """INSERT INTO public.fms_telemetry_archive
-                               (vehicle_id, recorded_at, lat, lon, speed_kmh, fuel_pct, engine_temp, odometer_km)
-                               VALUES (@vid, @ts, @lat, @lon, @speed, @fuel, @temp, @odo)"""
-                            {| vid   = Guid.Parse(t.VehicleId)
-                               ts    = t.Timestamp
-                               lat   = t.Lat
-                               lon   = t.Lon
-                               speed = t.SpeedKmh
-                               fuel  = t.FuelPct
-                               temp  = t.EngineTemp
-                               odo   = t.OdometerKm |} conn tx
-                    ()
-                return ()
-            })
+            persistTelemetryToDb msgs |> ignore
 
-        // Broadcast latest reading per vehicle via SignalR
-        let perVehicle =
-            msgs
-            |> Seq.groupBy (fun t -> t.VehicleId)
-            |> Seq.map (fun (vid, readings) -> readings |> Seq.maxBy (fun r -> r.Timestamp))
-
-        for t in perVehicle do
-            let loc = {Latitude = t.Lat; Longitude = t.Lon}
-            broadcaster.BroadcastTelemetry {
-                VehicleId  = VehicleId (Guid.Parse(t.VehicleId))
-                Location   = loc
-                DiagCodes  = []
-                SpeedKmh   = t.SpeedKmh
-                FuelPct    = t.FuelPct
-                EngineTemp = t.EngineTemp
-                OdometerKm = t.OdometerKm
-                Timestamp  = t.Timestamp
-            } |> ignore
+            // Broadcast latest reading per vehicle via SignalR
+            broadcastToSignalR msgs
 
         return msgs.Count
     }

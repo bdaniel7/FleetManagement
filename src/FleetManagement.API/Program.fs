@@ -47,7 +47,7 @@ let configureSerilog (cfg: IConfiguration) =
 
     Log.Logger <-
         LoggerConfiguration()
-            .MinimumLevel.Information()
+            .MinimumLevel.Debug()
             .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
             .MinimumLevel.Override("System", LogEventLevel.Warning)
             .MinimumLevel.Override("Akka", LogEventLevel.Information)

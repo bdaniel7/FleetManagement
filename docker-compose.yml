@@ -12,11 +12,44 @@ x-api-env: &api-env
   Jwt__Issuer:      fleet-api
   Jwt__Audience:    fleet-client
   AllowedOrigins:   http://localhost,http://frontend
+  # ── NATS / JetStream ──────────────────────────────────────
+  Nats__Url:              nats://nats:4222
+  Nats__StreamName:       FLEET_TELEMETRY
+  Nats__ConsumerName:     fleet-api-consumer
+  Nats__Subject:          fleet.telemetry.>
+  Nats__BatchSize:        "500"
+  Nats__PollIntervalMs:   "5000"   # poll every 5 seconds
+  # ── Open Telemetry ──
   Seq__Url:         http://seq:5341
   OTEL_EXPORTER_OTLP_ENDPOINT: http://seq:5341
   OTEL_SERVICE_NAME: FleetManagement.API
 
 services:
+  # ── NATS with JetStream ──────────────────────────────────────
+  nats:
+    image: nats:2.12.7-alpine
+    container_name: fleet-nats
+    hostname: nats
+    restart: unless-stopped
+    command: ["-c", "/etc/nats/nats.conf"]
+    volumes:
+      - ./infra/nats/nats.conf:/etc/nats/nats.conf:ro
+      - nats-data:/data/jetstream
+    ports:
+      - 4222:4222   # client connections
+      - 8222:8222   # HTTP monitoring  (nats-top, health checks)
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://nats:8222/healthz || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - fleet-internal
+    deploy:
+      resources:
+        limits:
+          memory: 512m
 
   # ── PostgreSQL ───────────────────────────────────────────────
   postgres:
@@ -117,6 +150,8 @@ services:
         condition: service_healthy
       seq:
         condition: service_started
+      nats:
+        condition: service_healthy
     environment:
       <<: *api-env
       Akka__Hostname:  api-node1
@@ -157,6 +192,8 @@ services:
         condition: service_healthy
       seq:
         condition: service_started
+      nats:
+        condition: service_healthy
     environment:
       <<: *api-env
       Akka__Hostname:  api-node2
@@ -182,6 +219,29 @@ services:
         limits:
           memory: 1g
           cpus: '2'
+
+  # ── Vehicle Simulator ─────────────────────────────────────────
+  # Publishes telemetry to NATS; patches location/status via HTTP.
+  # Run manually with: docker compose run --rm simulator --help
+  simulator:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.simulator
+    container_name: fleet-simulator
+    profiles: ["simulator"]   # opt-in: docker compose --profile simulator up
+    restart: "no"
+    depends_on:
+      nats:
+        condition: service_healthy
+      api-node1:
+        condition: service_healthy
+    environment:
+      SIMULATOR_API_URL:  http://api-node1:5000
+      SIMULATOR_NATS_URL: nats://nats:4222
+      SIMULATOR_TICK_MS:  "2000"
+      SIMULATOR_VEHICLES: "20"
+    networks:
+      - fleet-internal
 
   # ── Svelte Frontend ──────────────────────────────────────────
   frontend:
@@ -218,13 +278,14 @@ services:
 networks:
   fleet-internal:
     driver: bridge
-    internal: true    # no direct internet access for backend services
+#    internal: true    # no direct internet access for backend services
   fleet-external:
     driver: bridge    # nginx is the only publicly reachable service
 
 # ── Volumes ───────────────────────────────────────────────────
 volumes:
   postgres-data:
+  nats-data:
   seq-data:
   rabbitmq-data:
   mqtt-data:

@@ -23,6 +23,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "postgres", "postgres", "{EB
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FleetManagement.Simulator", "src\FleetManagement.Simulator\FleetManagement.Simulator.fsproj", "{BB6CAFBD-F409-4D88-8E04-53F4E9324A5B}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docker", "docker", "{D80E09F8-5E90-4695-B212-0FBD121C6BF9}"
+	ProjectSection(SolutionItems) = preProject
+		docker-compose.yml = docker-compose.yml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -67,5 +72,6 @@ Global
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{EB1A9D34-8225-422B-8184-ECEBEDD82DD8} = {7515F465-D9B2-4D29-B59F-327554737151}
+		{D80E09F8-5E90-4695-B212-0FBD121C6BF9} = {7515F465-D9B2-4D29-B59F-327554737151}
 	EndGlobalSection
 EndGlobal

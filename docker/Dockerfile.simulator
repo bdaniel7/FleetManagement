@@ -1,0 +1,12 @@
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+COPY src/FleetManagement.Simulator/FleetManagement.Simulator.fsproj ./FleetManagement.Simulator/
+RUN dotnet restore FleetManagement.Simulator/FleetManagement.Simulator.fsproj
+COPY src/FleetManagement.Simulator/ ./FleetManagement.Simulator/
+RUN dotnet publish FleetManagement.Simulator/FleetManagement.Simulator.fsproj \
+    -c Release -o /app/publish --no-restore
+
+FROM mcr.microsoft.com/dotnet/runtime:10.0 AS final
+WORKDIR /app
+COPY --from=build /app/publish .
+ENTRYPOINT ["dotnet", "FleetManagement.Simulator.dll"]

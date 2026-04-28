@@ -68,12 +68,13 @@ type SimVehicle = {
 
 type SimOptions = {
     ApiBaseUrl    : string
-    VehicleCount  : int        // max vehicles to simulate (-1 = all)
-    TickMs        : int        // milliseconds between each tick
-    TotalTicks    : int        // how many ticks to run (-1 = infinite)
-    SpeedMin      : float      // km/h min speed
-    SpeedMax      : float      // km/h max speed
-    FuelBurnRate  : float      // % per km
+    NatsUrl       : string       // NATS server URL for telemetry publishing
+    VehicleCount  : int          // max vehicles to simulate (-1 = all)
+    TickMs        : int          // milliseconds between each tick
+    TotalTicks    : int          // how many ticks to run (-1 = infinite)
+    SpeedMin      : float        // km/h min speed
+    SpeedMax      : float        // km/h max speed
+    FuelBurnRate  : float        // % per km
     InitialFuelPct: float option // set initial fuel for all vehicles
     RetryCount    : int        // number of retries for API calls
     RetryWaitSecs : float      // initial wait seconds between retries
@@ -82,15 +83,16 @@ type SimOptions = {
 
 module SimOptions =
     let defaults = {
-        ApiBaseUrl    = "http://localhost:5000"
-        VehicleCount  = -1
-        TickMs        = 2000
-        TotalTicks    = -1
-        SpeedMin      = 40.0
-        SpeedMax      = 120.0
-        FuelBurnRate  = 0.08    // 0.08% per km
+        ApiBaseUrl   = "http://localhost:5000"
+        NatsUrl      = "nats://localhost:4222"
+        VehicleCount = -1
+        TickMs       = 2000
+        TotalTicks   = -1
+        SpeedMin     = 40.0
+        SpeedMax     = 120.0
+        FuelBurnRate = 0.08 // 0.08 per km
         InitialFuelPct = None
         RetryCount    = 5
         RetryWaitSecs = 5.0
-        Verbose       = false
+        Verbose      = false
     }

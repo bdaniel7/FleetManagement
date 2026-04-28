@@ -309,8 +309,8 @@ type Route = {
     Id            : RouteId
     VehicleId     : VehicleId
     DriverId      : DriverId option
-    Waypoints     : Waypoint list       // ordered
-    OptimizedPath : NodeId list
+    Waypoints     : Waypoint list           // ordered waypoints
+    OptimizedPath : GeoCoordinate list       // full path coordinates through road graph
     TotalDistanceKm: float
     EstimatedDurationMin: int
     Status        : RouteStatus

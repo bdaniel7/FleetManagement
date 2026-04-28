@@ -4,6 +4,7 @@ open System
 open System.Text.Json
 open System.Text.Json.Serialization
 open FleetManagement.API.Endpoints.TripEndpoints
+open FleetManagement.API.Messaging.NatsTelemetryConsumer
 open FleetManagement.Core.Domain
 open FleetManagement.Infrastructure.IRepositories
 open FleetManagement.Infrastructure.Repositories.TripsRepository
@@ -43,7 +44,7 @@ open System.Diagnostics
 
 let configureSerilog (cfg: IConfiguration) =
     let seqUrl = cfg.["Seq:Url"] |> Option.ofObj |> Option.defaultValue "http://localhost:5341"
-    
+
     Log.Logger <-
         LoggerConfiguration()
             .MinimumLevel.Information()
@@ -53,7 +54,7 @@ let configureSerilog (cfg: IConfiguration) =
             .Enrich.FromLogContext()
             .Enrich.WithProperty("Application", "FleetManagement.API")
             .Enrich.WithProperty("ServiceName", serviceName)
-            .Enrich.WithProperty("TraceId", fun logEvent -> 
+            .Enrich.WithProperty("TraceId", fun logEvent ->
                 if Activity.Current <> null then Activity.Current.TraceId.ToString() else "")
             .Enrich.WithProperty("SpanId", fun logEvent ->
                 if Activity.Current <> null then Activity.Current.SpanId.ToString() else "")
@@ -128,6 +129,8 @@ let main args =
         services.AddScoped<IEventRepository,   PostgresEventRepository>()   |> ignore
         services.AddScoped<ITripsRepository,   PostgresTripsRepository>()   |> ignore
         services.AddScoped<IAlertsRepository, PostgresAlertsRepository>() |> ignore
+
+        services.AddHostedService<NatsTelemetryConsumer>() |> ignore
 
         services.Configure<JsonOptions> (fun (opts: JsonOptions) ->
             opts.SerializerOptions.Converters.Add(VehicleStatusConverter())) |> ignore
@@ -212,16 +215,14 @@ let main args =
             let broadcaster   = sp.GetRequiredService<IFleetHubBroadcaster>()
             let alertPublishers = sp.GetServices<IAlertPublisher>() |> Seq.toList
             let alertsRepo    = sp.GetRequiredService<IAlertsRepository>()
-            let eventRepo   = sp.GetRequiredService<IEventRepository>()
-            let seedNodes    = akkaSeedNodes.Split(',') |> Array.map (fun s -> s.Trim()) |> Array.toList
+            let eventRepo     = sp.GetRequiredService<IEventRepository>()
+            let seedNodes     = akkaSeedNodes.Split(',') |> Array.map (fun s -> s.Trim()) |> Array.toList
             let lowFuelThreshold = cfg.["Alerts:LowFuelThreshold"]
                                    |> Option.ofObj
                                    |> Option.map float
                                    |> Option.defaultValue 20.0
-            let publishEvent  = fun (ev: DomainEvent) ->
-                eventRepo.Append ev |> Async.Start
-            let broadcastTelemetry = fun (ev: TelemetryEvent) ->
-                broadcaster.BroadcastTelemetry ev |> ignore
+            let publishEvent  = fun (ev: DomainEvent) -> eventRepo.Append ev |> Async.Start
+            let broadcastTelemetry = fun (ev: TelemetryEvent) -> broadcaster.BroadcastTelemetry ev |> ignore
             let publishAlert = fun (alert: FleetAlert) ->
                 let alertInfo: AlertInfo = {
                     AlertId   = alert.AlertId
@@ -240,6 +241,7 @@ let main args =
                 alertsRepo.Insert(record) |> Async.Start
                 // Notify publishers (SignalR, RabbitMQ, etc.)
                 alertPublishers |> List.iter (fun pub -> pub.PublishAlert(alertInfo) |> ignore)
+
             start akkaHost akkaPort seedNodes publishEvent broadcastTelemetry publishAlert lowFuelThreshold) |> ignore
 
         // ── Build app ─────────────────────────────────────────────

@@ -43,12 +43,18 @@ let inline private nodeIdStr (NodeId s) = s
 //  Route builder helpers
 // ============================================================
 
-let private buildRoute (req: RouteRequest) (result: PathResult) : Route =
+let private nodeToCoordinate (nodeId: NodeId) (graph: RoadGraph) : GeoCoordinate =
+    match graph.Nodes.TryGetValue(nodeId) with
+    | true, node -> node.Coordinate
+    | false, _ -> { Latitude = 0.0; Longitude = 0.0 }
+
+let private buildRoute (req: RouteRequest) (pathResult: PathResult) (graph: RoadGraph) : Route =
+    let pathCoords = pathResult.Path |> List.map (fun nid -> nodeToCoordinate nid graph)
     let waypoints =
-        result.Path
+        pathResult.Path
         |> List.mapi (fun i nodeId ->
             { NodeId         = nodeId
-              Coordinate     = { Latitude = 0.0; Longitude = 0.0 }  // filled by caller
+              Coordinate     = pathCoords.[i]
               Address        = nodeIdStr nodeId
               ArrivalTime    = None
               DepartureTime  = None
@@ -58,9 +64,9 @@ let private buildRoute (req: RouteRequest) (result: PathResult) : Route =
         VehicleId            = req.VehicleId
         DriverId             = req.DriverId
         Waypoints            = waypoints
-        OptimizedPath        = result.Path
-        TotalDistanceKm      = result.TotalDistanceKm
-        EstimatedDurationMin = int (result.TotalCost)
+        OptimizedPath        = pathCoords
+        TotalDistanceKm      = pathResult.TotalDistanceKm
+        EstimatedDurationMin = int (pathResult.TotalCost)
         Status               = RouteStatus.Planned
         Priority             = req.Priority
         Algorithm            = req.Algorithm
@@ -124,7 +130,7 @@ let routeCalculatorActor
                                      pathResult.Path.Length, pathResult.TotalDistanceKm,
                                      int pathResult.TotalCost, req.Algorithm, pathResult.ComputedInMs)
                             let routeId = RouteId (Guid.NewGuid())
-                            let route   = buildRoute req pathResult
+                            let route   = buildRoute req pathResult graph
                             let route'  = { route with Id = routeId }
                             req.ReplyTo.Tell(RouteComputed (routeId, route'))
                             let next = {

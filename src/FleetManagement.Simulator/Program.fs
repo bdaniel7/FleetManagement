@@ -17,6 +17,7 @@ let private printHelp () =
     AnsiConsole.MarkupLine("[bold]OPTIONS:[/]")
     let opts = [
         "--api",       "<url>",   "API base URL (default: http://localhost:5000)"
+        "--nats",      "<url>",   "NATS server URL for telemetry (default: nats://localhost:4222)"
         "--vehicles",  "<n>",     "Number of vehicles to simulate (default: all)"
         "--tick",      "<ms>",    "Milliseconds between ticks (default: 2000)"
         "--ticks",     "<n>",     "Total ticks to run then exit (default: run forever)"
@@ -66,6 +67,9 @@ let private parseArgs (argv: string[]) =
 
         | "--api" ->
             opts <- { opts with ApiBaseUrl = next() }
+
+        | "--nats" ->
+            opts <- { opts with NatsUrl = next() }
 
         | "--vehicles" ->
             match Int32.TryParse(next()) with
@@ -142,6 +146,7 @@ let private printBanner (opts: SimOptions) =
     AnsiConsole.Write(rule)
     printfn ""
     AnsiConsole.MarkupLine($"  API URL    : [cyan]{opts.ApiBaseUrl}[/]")
+    AnsiConsole.MarkupLine($"  NATS URL   : [cyan]{opts.NatsUrl}[/]")
     AnsiConsole.MarkupLine($"""  Vehicles   : [cyan]{if opts.VehicleCount <= 0 then "all" else string opts.VehicleCount}[/]""")
     AnsiConsole.MarkupLine($"  Tick       : [cyan]{opts.TickMs} ms[/]")
     AnsiConsole.MarkupLine($"""  Duration   : [cyan]{if opts.TotalTicks <= 0 then "infinite (Ctrl+C to stop)" else string opts.TotalTicks + " ticks"}[/]""")

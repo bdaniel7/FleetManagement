@@ -108,32 +108,33 @@ type NatsTelemetryConsumer(
 
     // ── Process one batch of messages ──────────────────────────
 
-    let persistTelemetryToDb (msgs: ResizeArray<TelemetryMessage>) = task {
-            do! db.InTransaction(fun conn tx -> async {
-                for t in msgs do
-                    let! _ =
-                        Db.execute
-                            """INSERT INTO public.fms_telemetry_archive
-                               (vehicle_id, recorded_at, lat, lon, speed_kmh, fuel_pct, engine_temp, odometer_km)
-                               VALUES (@vid, @ts, @lat, @lon, @speed, @fuel, @temp, @odo)"""
-                            {| vid   = Guid.Parse(t.VehicleId)
-                               ts    = t.Timestamp
-                               lat   = t.Lat
-                               lon   = t.Lon
-                               speed = t.SpeedKmh
-                               fuel  = t.FuelPct
-                               temp  = t.EngineTemp
-                               odo   = t.OdometerKm |} conn tx
-                    ()
-                return ()
-            })
-    }
+    let persistTelemetryToDb (msgs: ResizeArray<TelemetryMessage>) =
+        db.InTransaction(fun conn tx -> async {
+            for t in msgs do
+                let! _ =
+                    Db.execute
+                        """INSERT INTO public.fms_telemetry_archive
+                           (vehicle_id, recorded_at, lat, lon, speed_kmh, fuel_pct, engine_temp, odometer_km)
+                           VALUES (@vid, @ts, @lat, @lon, @speed, @fuel, @temp, @odo)"""
+                        {| vid   = Guid.Parse(t.VehicleId)
+                           ts    = t.Timestamp
+                           lat   = t.Lat
+                           lon   = t.Lon
+                           speed = t.SpeedKmh
+                           fuel  = t.FuelPct
+                           temp  = t.EngineTemp
+                           odo   = t.OdometerKm |} conn tx
+                ()
+            return ()
+        })
+        |> Async.RunSynchronously
+        msgs
 
     let broadcastToSignalR (msgs: ResizeArray<TelemetryMessage>) =
         let perVehicle =
             msgs
-            |> Seq.groupBy (fun t -> t.VehicleId)
-            |> Seq.map (fun (vid, readings) -> readings |> Seq.maxBy (fun r -> r.Timestamp))
+            |> Seq.groupBy _.VehicleId
+            |> Seq.map (fun (_, readings) -> readings |> Seq.maxBy _.Timestamp)
 
         for t in perVehicle do
             let loc = {Latitude = t.Lat; Longitude = t.Lon}
@@ -175,10 +176,9 @@ type NatsTelemetryConsumer(
         if msgs.Count > 0 then
             logger.LogDebug("Processing batch of {Count} telemetry messages", msgs.Count)
 
-            persistTelemetryToDb msgs |> ignore
-
-            // Broadcast latest reading per vehicle via SignalR
-            broadcastToSignalR msgs
+            do! task {
+                msgs |> persistTelemetryToDb |> broadcastToSignalR
+            }
 
         return msgs.Count
     }

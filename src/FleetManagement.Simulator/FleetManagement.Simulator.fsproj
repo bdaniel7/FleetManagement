@@ -14,14 +14,19 @@
     <Compile Include="ApiClient.fs" />
     <Compile Include="Movement.fs" />
     <Compile Include="NatsPublisher.fs" />
+    <Compile Include="RabbitMqPublisher.fs" />
     <Compile Include="Simulator.fs" />
     <Compile Include="Program.fs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Update="FSharp.Core"                      Version="10.1.201" />
+    <PackageReference Update="FSharp.Core" Version="10.1.203" />
     <PackageReference Include="Microsoft.Extensions.Http"       Version="10.*" />
     <PackageReference Include="NATS.Net" Version="2.7.3" />
     <PackageReference Include="Polly" Version="8.5.0" />
+    <PackageReference Include="RabbitMQ.Client" Version="7.2.1" />
     <PackageReference Include="Spectre.Console" Version="0.54.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\FleetManagement.Core\FleetManagement.Core.fsproj" />
   </ItemGroup>
 </Project>

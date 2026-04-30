@@ -1,0 +1,88 @@
+{
+  "rabbit_version": "3.13.0",
+  "rabbitmq_version": "3.13.0",
+  "vhosts": [
+    { "name": "fleet" }
+  ],
+  "users": [
+    {
+      "name": "fleet_admin",
+      "password_hash": "",
+      "hashing_algorithm": "rabbit_password_hashing_sha256",
+      "tags": ["administrator"],
+      "limits": {}
+    },
+    {
+      "name": "fleet_api",
+      "password_hash": "",
+      "hashing_algorithm": "rabbit_password_hashing_sha256",
+      "tags": [],
+      "limits": {}
+    },
+    {
+      "name": "fleet_sim",
+      "password_hash": "",
+      "hashing_algorithm": "rabbit_password_hashing_sha256",
+      "tags": [],
+      "limits": {}
+    }
+  ],
+  "permissions": [
+    {
+      "user":      "fleet_admin",
+      "vhost":     "fleet",
+      "configure": ".*",
+      "write":     ".*",
+      "read":      ".*"
+    },
+    {
+      "user":      "fleet_api",
+      "vhost":     "fleet",
+      "configure": "fleet\\.telemetry|fleet-api-telemetry",
+      "write":     "fleet\\.telemetry",
+      "read":      "fleet-api-telemetry"
+    },
+    {
+      "user":      "fleet_sim",
+      "vhost":     "fleet",
+      "configure": "",
+      "write":     "fleet\\.telemetry",
+      "read":      ""
+    }
+  ],
+  "exchanges": [
+    {
+      "name":        "fleet.telemetry",
+      "vhost":       "fleet",
+      "type":        "topic",
+      "durable":     true,
+      "auto_delete": false,
+      "internal":    false,
+      "arguments":   {}
+    }
+  ],
+  "queues": [
+    {
+      "name":        "fleet-api-telemetry",
+      "vhost":       "fleet",
+      "durable":     true,
+      "auto_delete": false,
+      "exclusive":   false,
+      "arguments": {
+        "x-message-ttl":  604800000,
+        "x-max-length":   1000000,
+        "x-overflow":     "drop-head"
+      }
+    }
+  ],
+  "bindings": [
+    {
+      "source":           "fleet.telemetry",
+      "vhost":            "fleet",
+      "destination":      "fleet-api-telemetry",
+      "destination_type": "queue",
+      "routing_key":      "fleet.telemetry.#",
+      "arguments":        {}
+    }
+  ]
+}

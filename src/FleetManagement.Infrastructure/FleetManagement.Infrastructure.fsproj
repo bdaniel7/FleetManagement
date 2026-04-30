@@ -26,7 +26,8 @@
     <PackageReference Include="Npgsql.OpenTelemetry" Version="10.0.2" />
     <PackageReference Include="Dapper"                    Version="2.*" />
     <PackageReference Include="Npgsql.NodaTime" Version="10.0.2" />
-    <PackageReference Update="FSharp.Core"               Version="10.1.201" />
+    <PackageReference Update="FSharp.Core" Version="10.1.203" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.*" />
+    <PackageReference Include="OpenTelemetry.Api" Version="1.15.3" />
   </ItemGroup>
 </Project>

@@ -13,6 +13,7 @@
     <Compile Include="Middleware/RateLimitMiddleware.fs" />
     <Compile Include="Hubs/TelemetryHub.fs" />
     <Compile Include="Messaging\NatsTelemetryConsumer.fs" />
+    <Compile Include="Messaging\RabbitMqTelemetryConsumer.fs" />
     <Compile Include="AlertPublishers.fs" />
     <Compile Include="Endpoints\Dtos.fs" />
     <Compile Include="Endpoints/VehicleEndpoints.fs" />
@@ -34,20 +35,20 @@
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.*" />
     <PackageReference Include="Microsoft.OpenApi" Version="3.5.1" />
     <PackageReference Include="NATS.Net" Version="2.7.3" />
-    <PackageReference Include="OpenTelemetry.Api" Version="1.15.1" />
+    <PackageReference Include="OpenTelemetry.Api" Version="1.15.3" />
     <PackageReference Include="Serilog" Version="4.3.1" />
     <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
     <PackageReference Include="Serilog.Sinks.Console"                  Version="6.*" />
     <PackageReference Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageReference Include="Serilog.Sinks.Seq" Version="9.0.0" />
-    <PackageReference Include="OpenTelemetry" Version="1.15.1" />
-    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.15.1" />
-    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.15.1" />
-    <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.15.0" />
-    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.15.1" />
-    <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.15.1" />
+    <PackageReference Include="OpenTelemetry" Version="1.15.3" />
+    <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.15.3" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.15.2" />
+    <PackageReference Include="OpenTelemetry.Instrumentation.Http" Version="1.15.1" />
+    <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.15.3" />
+    <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.15.3" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.7" />
-    <PackageReference Include="RabbitMQ.Client" Version="6.8.1" />
-    <PackageReference Update="FSharp.Core" Version="10.1.201" />
+    <PackageReference Include="RabbitMQ.Client" Version="7.2.1" />
+    <PackageReference Update="FSharp.Core" Version="10.1.203" />
   </ItemGroup>
 </Project>

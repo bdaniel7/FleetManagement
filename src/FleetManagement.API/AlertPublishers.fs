@@ -31,7 +31,7 @@ type RabbitMqAlertPublisher(config: IConfiguration, log: ILogger<RabbitMqAlertPu
     let routingKey = config.["RabbitMq:RoutingKey"] |> Option.ofObj |> Option.defaultValue "fleet.alert.lowfuel"
 
     let mutable connection: IConnection option = None
-    let mutable channel: IModel option = None
+    let mutable channel: IChannel option = None
 
     let ensureConnected() =
         if enabled && connection.IsNone then
@@ -42,9 +42,11 @@ type RabbitMqAlertPublisher(config: IConfiguration, log: ILogger<RabbitMqAlertPu
                 factory.UserName <- username
                 factory.Password <- password
                 factory.AutomaticRecoveryEnabled <- true
-                connection <- Some (factory.CreateConnection())
-                channel <- Some (connection.Value.CreateModel())
-                channel.Value.ExchangeDeclare(exchange, ExchangeType.Topic, durable = true)
+                let conn = factory.CreateConnectionAsync().GetAwaiter().GetResult()
+                connection <- Some conn
+                channel <- Some (conn.CreateChannelAsync().GetAwaiter().GetResult())
+                channel.Value.ExchangeDeclareAsync(exchange, ExchangeType.Topic, durable = true)
+                    .GetAwaiter().GetResult()
                 log.LogInformation("Connected to RabbitMQ at {Host}:{Port}", host, port)
             with ex ->
                 log.LogError(ex, "Failed to connect to RabbitMQ")
@@ -59,10 +61,11 @@ type RabbitMqAlertPublisher(config: IConfiguration, log: ILogger<RabbitMqAlertPu
                     try
                         let json = JsonSerializer.Serialize alert
                         let body = System.Text.Encoding.UTF8.GetBytes json
-                        let props = ch.CreateBasicProperties()
+                        let props = BasicProperties()
                         props.ContentType <- "application/json"
-                        props.DeliveryMode <- 2uy
-                        ch.BasicPublish(exchange, routingKey, props, body) |> ignore
+                        props.DeliveryMode <- DeliveryModes.Persistent
+                        let addr = PublicationAddress(ExchangeType.Topic, exchange, routingKey)
+                        do! ch.BasicPublishAsync(addr, props, body.AsMemory())
                         log.LogDebug("Published alert to RabbitMQ: {Message}", alert.Message)
                     with ex ->
                         log.LogError(ex, "Failed to publish alert to RabbitMQ")
@@ -71,8 +74,8 @@ type RabbitMqAlertPublisher(config: IConfiguration, log: ILogger<RabbitMqAlertPu
 
     interface IDisposable with
         member _.Dispose() =
-            channel |> Option.iter (fun ch -> ch.Dispose())
-            connection |> Option.iter (fun conn -> conn.Dispose())
+            channel |> Option.iter _.Dispose()
+            connection |> Option.iter _.Dispose()
 
 type SignalRAlertPublisher(hub: IHubContext<TelemetryHub>, log: ILogger<SignalRAlertPublisher>) =
 

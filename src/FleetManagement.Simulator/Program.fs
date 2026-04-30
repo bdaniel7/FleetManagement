@@ -17,7 +17,12 @@ let private printHelp () =
     AnsiConsole.MarkupLine("[bold]OPTIONS:[/]")
     let opts = [
         "--api",       "<url>",   "API base URL (default: http://localhost:5000)"
-        "--nats",      "<url>",   "NATS server URL for telemetry (default: nats://localhost:4222)"
+        "--nats",      "<url>",   "NATS URL incl. credentials (default: nats://fleet_sim:...@localhost:4222)"
+        "--rabbit-host",  "<host>",  "RabbitMQ host (default: localhost)"
+        "--rabbit-port",  "<port>",  "RabbitMQ port (default: 5672)"
+        "--rabbit-vhost", "<vhost>", "RabbitMQ virtual host (default: fleet)"
+        "--rabbit-user",  "<user>",  "RabbitMQ username (default: fleet_sim)"
+        "--rabbit-pass",  "<pass>",  "RabbitMQ password"
         "--vehicles",  "<n>",     "Number of vehicles to simulate (default: all)"
         "--tick",      "<ms>",    "Milliseconds between ticks (default: 2000)"
         "--ticks",     "<n>",     "Total ticks to run then exit (default: run forever)"
@@ -70,6 +75,25 @@ let private parseArgs (argv: string[]) =
 
         | "--nats" ->
             opts <- { opts with NatsUrl = next() }
+
+        | "--rabbit-host" ->
+            opts <- { opts with RabbitHost = next() }
+
+        | "--rabbit-port" ->
+            match Int32.TryParse(next()) with
+            | true, n -> opts <- { opts with RabbitPort = n }
+            | _ ->
+                AnsiConsole.MarkupLine("[red]Error: --rabbit-port must be an integer[/]")
+                ok <- false
+
+        | "--rabbit-vhost" ->
+            opts <- { opts with RabbitVHost = next() }
+
+        | "--rabbit-user" ->
+            opts <- { opts with RabbitUser = next() }
+
+        | "--rabbit-pass" ->
+            opts <- { opts with RabbitPass = next() }
 
         | "--vehicles" ->
             match Int32.TryParse(next()) with
@@ -147,6 +171,9 @@ let private printBanner (opts: SimOptions) =
     printfn ""
     AnsiConsole.MarkupLine($"  API URL    : [cyan]{opts.ApiBaseUrl}[/]")
     AnsiConsole.MarkupLine($"  NATS URL   : [cyan]{opts.NatsUrl}[/]")
+    AnsiConsole.MarkupLine($"  RabbitMQ   : [cyan]{opts.RabbitHost}:{opts.RabbitPort}/{opts.RabbitVHost}[/]")
+    AnsiConsole.MarkupLine($"""  Vehicles   : [cyan]{if opts.VehicleCount <= 0 then "all" else string opts.VehicleCount}[/]""")
+    AnsiConsole.MarkupLine($"""  Vehicles   : [cyan]{if opts.VehicleCount <= 0 then "all" else string opts.VehicleCount}[/]""")
     AnsiConsole.MarkupLine($"""  Vehicles   : [cyan]{if opts.VehicleCount <= 0 then "all" else string opts.VehicleCount}[/]""")
     AnsiConsole.MarkupLine($"  Tick       : [cyan]{opts.TickMs} ms[/]")
     AnsiConsole.MarkupLine($"""  Duration   : [cyan]{if opts.TotalTicks <= 0 then "infinite (Ctrl+C to stop)" else string opts.TotalTicks + " ticks"}[/]""")
@@ -165,7 +192,21 @@ let main argv =
     | None -> 1
     | Some opts ->
 
-    printBanner opts
+    // Allow Docker env vars to override defaults without requiring CLI flags
+    let envOpts =
+        let get key fallback = Environment.GetEnvironmentVariable(key) |> Option.ofObj |> Option.defaultValue fallback
+        { opts with
+            ApiBaseUrl  = get "SIMULATOR_API_URL"    opts.ApiBaseUrl
+            NatsUrl     = get "SIMULATOR_NATS_URL"   opts.NatsUrl
+            RabbitHost  = get "SIMULATOR_RABBIT_HOST"  opts.RabbitHost
+            RabbitPort  = get "SIMULATOR_RABBIT_PORT"  (string opts.RabbitPort) |> int
+            RabbitVHost = get "SIMULATOR_RABBIT_VHOST" opts.RabbitVHost
+            RabbitUser  = get "SIMULATOR_RABBIT_USER"  opts.RabbitUser
+            RabbitPass  = get "SIMULATOR_RABBIT_PASS"  opts.RabbitPass
+            TickMs      = get "SIMULATOR_TICK_MS"    (string opts.TickMs)    |> int
+            VehicleCount= get "SIMULATOR_VEHICLES"   (string opts.VehicleCount) |> int }
+
+    printBanner envOpts
 
     // Graceful shutdown on Ctrl+C
     use cts = new CancellationTokenSource()
@@ -175,7 +216,7 @@ let main argv =
         cts.Cancel())
 
     try
-        Simulator.run opts cts.Token |> Async.RunSynchronously
+        Simulator.run envOpts cts.Token |> Async.RunSynchronously
         0
     with
     | :? OperationCanceledException -> 0

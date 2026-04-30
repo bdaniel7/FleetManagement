@@ -1,9 +1,10 @@
-module FleetManagement.API.Messaging.NatsTelemetryConsumer
+namespace FleetManagement.API.Messaging
+
+//module FleetManagement.API.Messaging.NatsTelemetryConsumer
 
 open System
 open System.Linq
 open System.Text.Json
-open System.Text.Json.Serialization
 open System.Threading
 open System.Threading.Tasks
 open FleetManagement.Core.Domain
@@ -16,21 +17,6 @@ open NATS.Client.JetStream.Models
 open FleetManagement.Infrastructure.IRepositories
 open FleetManagement.Infrastructure.DbContext
 open FleetManagement.API.Hubs.TelemetryHub
-
-// ── Wire-format message (matches what the simulator publishes) ─
-
-[<CLIMutable>]
-type TelemetryMessage = {
-    [<JsonPropertyName("vehicleId")>]  VehicleId  : string
-    [<JsonPropertyName("lat")>]        Lat        : float
-    [<JsonPropertyName("lon")>]        Lon        : float
-    [<JsonPropertyName("speedKmh")>]   SpeedKmh   : float
-    [<JsonPropertyName("fuelPct")>]    FuelPct    : float
-    [<JsonPropertyName("engineTemp")>] EngineTemp : float
-    [<JsonPropertyName("odometerKm")>] OdometerKm : float
-    [<JsonPropertyName("diagCodes")>]  DiagCodes  : string[]
-    [<JsonPropertyName("timestamp")>]  Timestamp  : DateTimeOffset
-}
 
 // ── Configuration ──────────────────────────────────────────────
 
@@ -193,9 +179,9 @@ type NatsTelemetryConsumer(
             logger.LogInformation("NATS telemetry consumer starting — URL: {Url}", opts.Url)
 
             let natsOpts = NatsOpts(Url = opts.Url,
-                                        WebSocketOpts = NatsWebSocketOpts.Default,
-                                        TlsOpts = NatsTlsOpts.Default,
-                                        AuthOpts = NatsAuthOpts.Default)
+                                    WebSocketOpts = NatsWebSocketOpts.Default,
+                                    TlsOpts = NatsTlsOpts.Default,
+                                    AuthOpts = NatsAuthOpts.Default)
 
             // Build the poll loop as a plain Task and store it so StopAsync can observe it
             loopTask <- (task {

@@ -6,6 +6,7 @@ open Types
 open ApiClient
 open Movement
 open NatsPublisher
+open RabbitMqPublisher
 
 // ── Build SimVehicle from API DTO ─────────────────────────────
 
@@ -63,37 +64,42 @@ let private checkHealth (client: System.Net.Http.HttpClient) = async {
 
 let private runTick
     (client  : System.Net.Http.HttpClient)
-    (publisher : NatsPublisher)
+    (natsPublisher: NatsPublisher)
+    (rabbitPublisher: RabbitMqPublisher)
     (opts    : SimOptions)
     (tickSec : float)
     (vehicles: SimVehicle[]) : Async<SimVehicle[]> = async {
 
     let updated = Array.copy vehicles
     let tasks =
-        vehicles
-        |> Array.mapi (fun i sv ->
-            async {
-                let sv' = tick opts tickSec sv
+        vehicles |> Array.mapi (fun i sv -> async {
+                let simVehicle = tick opts tickSec sv
 
-                // // Always post telemetry
-                // do! postTelemetry client sv'.Id sv'
+                // Always post telemetry
+                //do! postTelemetry client sv'.Id sv'
                 // Telemetry → NATS JetStream
-                do! publisher.PublishTelemetry sv'
+                //do! natsPublisher.PublishTelemetry sv'
+
+                // Telemetry → both brokers concurrently
+                do! ( Async.Parallel [
+                    natsPublisher.PublishTelemetry simVehicle
+                    rabbitPublisher.PublishTelemetry simVehicle
+                ] |> Async.Ignore )
 
                 // Location → HTTP (updates actor + DB)
-                if sv'.IsMoving || sv'.Lat <> sv.Lat || sv'.Lon <> sv.Lon then
-                    do! patchLocation client sv'.Id sv'.Lat sv'.Lon sv'.SpeedKmh
+                if simVehicle.IsMoving || simVehicle.Lat <> sv.Lat || simVehicle.Lon <> sv.Lon then
+                    do! patchLocation client simVehicle.Id simVehicle.Lat simVehicle.Lon simVehicle.SpeedKmh
 
                 // Status transitions → HTTP
                 // If just started moving, set status to EnRoute
-                if sv'.IsMoving && not sv.IsMoving then
-                    do! patchStatus client sv'.Id "EnRoute"
+                if simVehicle.IsMoving && not sv.IsMoving then
+                    do! patchStatus client simVehicle.Id "EnRoute"
 
                 // If just stopped (reached last waypoint), set back to Idle
-                if not sv'.IsMoving && sv.IsMoving then
-                    do! patchStatus client sv'.Id "Idle"
+                if not simVehicle.IsMoving && sv.IsMoving then
+                    do! patchStatus client simVehicle.Id "Idle"
 
-                updated.[i] <- sv'
+                updated.[i] <- simVehicle
             })
 
     // Run all vehicle updates concurrently
@@ -105,7 +111,12 @@ let private runTick
 
 let run (opts: SimOptions) (cancelToken: CancellationToken) = async {
     use client = makeClient opts.ApiBaseUrl
-    let publisher = NatsPublisher(opts.NatsUrl)
+    let natsPublisher = NatsPublisher(opts.NatsUrl)
+    let rabbitPublisher  =
+        RabbitMqPublisher(
+            opts.RabbitHost, opts.RabbitPort,
+            opts.RabbitVHost, opts.RabbitUser, opts.RabbitPass)
+
     let tickSec = float opts.TickMs / 1000.0
 
     printfn "  Connecting to API at %s…" opts.ApiBaseUrl
@@ -119,10 +130,16 @@ let run (opts: SimOptions) (cancelToken: CancellationToken) = async {
 
     printfn "  Connecting to NATS at %s…" opts.NatsUrl
     try
-        do! publisher.ConnectAsync()
+        do! natsPublisher.ConnectAsync()
     with ex ->
         printfn "  ✗ NATS connection failed: %s" ex.Message
         printfn "    Start NATS with: docker compose up nats"
+
+    printfn "  Connecting to RabbitMQ at %s:%d/%s…" opts.RabbitHost opts.RabbitPort opts.RabbitVHost
+    try do! rabbitPublisher.ConnectAsync()
+    with ex ->
+        printfn "  ✗ RabbitMQ connection failed: %s" ex.Message
+        printfn "    Start RabbitMQ with: docker compose up rabbitmq"
 
     printfn "  Loading vehicles…"
 
@@ -166,7 +183,7 @@ let run (opts: SimOptions) (cancelToken: CancellationToken) = async {
     printfn ""
     printfn "  ╔═══════════════════════════════════════════════════╗"
     printfn "  ║  FlitOS Vehicle Simulator                         ║"
-    printfn "  ║  Telemetry  → NATS JetStream                    ║"
+    printfn "  ║  Telemetry  → NATS JetStream + RabbitMQ         ║"
     printfn "  ║  Location   → HTTP API                          ║"
     printfn "  ║  %d vehicles  |  tick %dms  |  Ctrl+C to stop   ║" take opts.TickMs
     printfn "  ╚═══════════════════════════════════════════════════╝"
@@ -176,7 +193,7 @@ let run (opts: SimOptions) (cancelToken: CancellationToken) = async {
     while not cancelToken.IsCancellationRequested &&
           (opts.TotalTicks <= 0 || tick < opts.TotalTicks) do
 
-        let! updated = runTick client publisher opts tickSec simVehicles
+        let! updated = runTick client natsPublisher rabbitPublisher opts tickSec simVehicles
         simVehicles <- updated
         tick <- tick + 1
 
@@ -212,5 +229,6 @@ let run (opts: SimOptions) (cancelToken: CancellationToken) = async {
 
     printfn ""
     printfn "  Simulation stopped after %d ticks." tick
-    do! publisher.DisposeAsync()
+    do! natsPublisher.DisposeAsync()
+    do! rabbitPublisher.DisposeAsync()
 }

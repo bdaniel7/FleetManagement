@@ -69,6 +69,11 @@ type SimVehicle = {
 type SimOptions = {
     ApiBaseUrl    : string
     NatsUrl       : string       // NATS server URL for telemetry publishing
+    RabbitHost    : string
+    RabbitPort    : int
+    RabbitVHost   : string
+    RabbitUser    : string
+    RabbitPass    : string
     VehicleCount  : int          // max vehicles to simulate (-1 = all)
     TickMs        : int          // milliseconds between each tick
     TotalTicks    : int          // how many ticks to run (-1 = infinite)
@@ -85,6 +90,11 @@ module SimOptions =
     let defaults = {
         ApiBaseUrl   = "http://localhost:5000"
         NatsUrl      = "nats://localhost:4222"
+        RabbitHost   = "localhost"
+        RabbitPort   = 5672
+        RabbitVHost  = "fleet"
+        RabbitUser   = "fleet_sim"
+        RabbitPass   = "sim_dev_only_change_me"
         VehicleCount = -1
         TickMs       = 2000
         TotalTicks   = -1

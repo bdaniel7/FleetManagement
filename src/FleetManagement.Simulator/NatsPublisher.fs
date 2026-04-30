@@ -2,26 +2,11 @@ module FleetManagement.Simulator.NatsPublisher
 
 open System
 open System.Text.Json
-open System.Text.Json.Serialization
 open System.Threading.Tasks
 open NATS.Client.Core
 open NATS.Client.JetStream
 open Types
-
-// ── Wire-format (must match NatsTelemetryConsumer.TelemetryMessage) ──
-
-[<CLIMutable>]
-type TelemetryMessage = {
-    [<JsonPropertyName("vehicleId")>]  VehicleId  : string
-    [<JsonPropertyName("lat")>]        Lat        : float
-    [<JsonPropertyName("lon")>]        Lon        : float
-    [<JsonPropertyName("speedKmh")>]   SpeedKmh   : float
-    [<JsonPropertyName("fuelPct")>]    FuelPct    : float
-    [<JsonPropertyName("engineTemp")>] EngineTemp : float
-    [<JsonPropertyName("odometerKm")>] OdometerKm : float
-    [<JsonPropertyName("diagCodes")>]  DiagCodes  : string list
-    [<JsonPropertyName("timestamp")>]  Timestamp  : DateTimeOffset
-}
+open FleetManagement.API.Messaging
 
 let private jsonOpts =
     let o = JsonSerializerOptions()
@@ -32,7 +17,10 @@ let private jsonOpts =
 
 type NatsPublisher(natsUrl: string) =
 
-    let natsOpts = NatsOpts(Url = natsUrl)
+    let natsOpts = NatsOpts(Url = natsUrl,
+                            WebSocketOpts = NatsWebSocketOpts.Default,
+                            TlsOpts = NatsTlsOpts.Default,
+                            AuthOpts = NatsAuthOpts.Default)
     let mutable connection: NatsConnection option = None
     let mutable js: NatsJSContext option = None
 
@@ -57,7 +45,7 @@ type NatsPublisher(natsUrl: string) =
                 FuelPct    = sv.FuelPct
                 EngineTemp = sv.EngineTemp
                 OdometerKm = sv.OdometerKm
-                DiagCodes  = []
+                DiagCodes  = [||]
                 Timestamp  = DateTimeOffset.UtcNow
             }
             let subject = $"fleet.telemetry.{sv.Id}"

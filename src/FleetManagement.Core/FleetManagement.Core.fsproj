@@ -16,9 +16,10 @@
     <Compile Include="Validation.fs" />
     <Compile Include="Events.fs" />
     <Compile Include="Commands.fs" />
+    <Compile Include="TelemetryMessage.fs" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Update="FSharp.Core" Version="10.1.201" />
+    <PackageReference Update="FSharp.Core" Version="10.1.203" />
     <PackageReference Include="FsToolkit.ErrorHandling" Version="5.2.0" />
   </ItemGroup>
 </Project>

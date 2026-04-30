@@ -4,7 +4,7 @@ open System
 open System.Text.Json
 open System.Text.Json.Serialization
 open FleetManagement.API.Endpoints.TripEndpoints
-open FleetManagement.API.Messaging.NatsTelemetryConsumer
+open FleetManagement.API.Messaging
 open FleetManagement.Core.Domain
 open FleetManagement.Infrastructure.IRepositories
 open FleetManagement.Infrastructure.Repositories.TripsRepository

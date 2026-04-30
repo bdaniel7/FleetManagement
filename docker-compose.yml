@@ -13,7 +13,7 @@ x-api-env: &api-env
   Jwt__Audience:    fleet-client
   AllowedOrigins:   http://localhost,http://frontend
   # ── NATS / JetStream ──────────────────────────────────────
-  Nats__Url:              nats://nats:4222
+  Nats__Url:              nats://${NATS_API_USER:-fleet_api}:${NATS_API_PASS:-api_dev_only_change_me}@nats:4222
   Nats__StreamName:       FLEET_TELEMETRY
   Nats__ConsumerName:     fleet-api-consumer
   Nats__Subject:          fleet.telemetry.>
@@ -23,6 +23,17 @@ x-api-env: &api-env
   Seq__Url:         http://seq:5341
   OTEL_EXPORTER_OTLP_ENDPOINT: http://seq:5341
   OTEL_SERVICE_NAME: FleetManagement.API
+  # ── RabbitMQ ───────────────────────────────────────────────
+  RabbitMq__Host:           rabbitmq
+  RabbitMq__Port:           "5672"
+  RabbitMq__VirtualHost:    fleet
+  RabbitMq__Username:       ${RABBIT_API_USER:-fleet_api}
+  RabbitMq__Password:       ${RABBIT_API_PASS:-api_dev_only_change_me}
+  RabbitMq__Exchange:       fleet.telemetry
+  RabbitMq__Queue:          fleet-api-telemetry
+  RabbitMq__RoutingKey:     "fleet.telemetry.#"
+  RabbitMq__BatchSize:      "500"
+  RabbitMq__PollIntervalMs: "5000"
 
 services:
   # ── NATS with JetStream ──────────────────────────────────────
@@ -32,6 +43,14 @@ services:
     hostname: nats
     restart: unless-stopped
     command: ["-c", "/etc/nats/nats.conf"]
+    environment:
+      # NATS expands $VAR references in nats.conf at startup
+      NATS_SIMULATOR_USER: ${NATS_SIMULATOR_USER:-fleet_sim}
+      NATS_SIMULATOR_PASS: ${NATS_SIMULATOR_PASS:-sim_dev_only_change_me}
+      NATS_API_USER:       ${NATS_API_USER:-fleet_api}
+      NATS_API_PASS:       ${NATS_API_PASS:-api_dev_only_change_me}
+      NATS_ADMIN_USER:     ${NATS_ADMIN_USER:-fleet_admin}
+      NATS_ADMIN_PASS:     ${NATS_ADMIN_PASS:-admin_dev_only_change_me}
     volumes:
       - ./infra/nats/nats.conf:/etc/nats/nats.conf:ro
       - nats-data:/data/jetstream
@@ -102,17 +121,26 @@ services:
 
   # ── RabbitMQ Message Broker ────────────────────────────────────
   rabbitmq:
-    image: rabbitmq:3-management-alpine
+    image: rabbitmq:3.13-management-alpine
     container_name: fleet-rabbitmq
     restart: unless-stopped
     environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_DEFAULT_USER:  ${RABBIT_ADMIN_USER:-fleet_admin}
+      RABBITMQ_DEFAULT_PASS:  ${RABBIT_ADMIN_PASS:-admin_dev_only_change_me}
+      RABBITMQ_DEFAULT_VHOST: fleet
     ports:
       - "5672:5672"   # AMQP
       - "15672:15672" # Management UI
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
+      - ./infra/rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
+      - ./infra/rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "check_running"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
     networks:
       - fleet-internal
     deploy:
@@ -237,7 +265,12 @@ services:
         condition: service_healthy
     environment:
       SIMULATOR_API_URL:  http://api-node1:5000
-      SIMULATOR_NATS_URL: nats://nats:4222
+      SIMULATOR_NATS_URL:   nats://${NATS_SIMULATOR_USER:-fleet_sim}:${NATS_SIMULATOR_PASS:-sim_dev_only_change_me}@nats:4222
+      SIMULATOR_RABBIT_HOST:  rabbitmq
+      SIMULATOR_RABBIT_PORT:  "5672"
+      SIMULATOR_RABBIT_VHOST: fleet
+      SIMULATOR_RABBIT_USER:  ${RABBIT_SIMULATOR_USER:-fleet_sim}
+      SIMULATOR_RABBIT_PASS:  ${RABBIT_SIMULATOR_PASS:-sim_dev_only_change_me}
       SIMULATOR_TICK_MS:  "2000"
       SIMULATOR_VEHICLES: "20"
     networks:
